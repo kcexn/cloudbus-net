@@ -20,7 +20,7 @@
 #pragma once
 #ifndef CLOUDBUS_ASYNC_TCP_SERVICE_IMPL_HPP
 #define CLOUDBUS_ASYNC_TCP_SERVICE_IMPL_HPP
-#include "segment/service/async_tcp_service.hpp"
+#include "net/service/async_tcp_service.hpp"
 
 #include <system_error>
 namespace cloudbus::service {
@@ -99,12 +99,14 @@ auto async_tcp_service<TCPStreamHandler>::reader(
       then([&, socket, rmsg](auto &&len) mutable {
         using size_type = std::size_t;
         if (!len)
-          return;
+          return emit(ctx, socket, {}, std::span<std::byte>{});
 
         auto buf = std::span{rmsg->buffer.data(), static_cast<size_type>(len)};
         emit(ctx, socket, std::move(rmsg), buf);
       }) |
-      upon_error([](auto &&error) {});
+      upon_error([&, socket](auto &&error) {
+        emit(ctx, socket, {}, std::span<std::byte>{});
+      });
 
   ctx.scope.spawn(std::move(recvmsg));
 }

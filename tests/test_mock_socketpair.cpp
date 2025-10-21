@@ -15,7 +15,7 @@
  */
 
 // NOLINTBEGIN
-#include "segment/service/async_service.hpp"
+#include "net/service/async_service.hpp"
 
 #include <gtest/gtest.h>
 

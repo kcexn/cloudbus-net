@@ -20,8 +20,8 @@
 #pragma once
 #ifndef CLOUDBUS_ASYNC_SERVICE_HPP
 #define CLOUDBUS_ASYNC_SERVICE_HPP
-#include "segment/detail/concepts.hpp"
-#include "segment/detail/immovable.hpp"
+#include "net/detail/concepts.hpp"
+#include "net/detail/immovable.hpp"
 
 #include <exec/async_scope.hpp>
 #include <io.hpp>
@@ -53,7 +53,8 @@ struct async_context : detail::immovable {
     /** @brief Calls the underlying interrupt. */
     inline auto operator()() const -> void;
     /** @brief Assigns a function to the underlying interrupt. */
-    inline auto operator=(std::function<void()> func) noexcept -> interrupt_type &;
+    inline auto
+    operator=(std::function<void()> func) noexcept -> interrupt_type &;
     /** @brief Tests to see if the interrupt has been assigned to. */
     inline explicit operator bool() const noexcept;
 

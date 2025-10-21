@@ -15,8 +15,8 @@
  */
 
 // NOLINTBEGIN
-#include "segment/service/async_service.hpp"
-#include "segment/service/async_tcp_service.hpp"
+#include "net/service/async_service.hpp"
+#include "net/service/async_tcp_service.hpp"
 
 #include <gtest/gtest.h>
 
@@ -68,7 +68,8 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
                   std::shared_ptr<read_context> rmsg,
                   std::span<const std::byte> buf) -> void
   {
-    echo(ctx, socket, rmsg, {.buffers = buf});
+    if (buf.data())
+      echo(ctx, socket, rmsg, {.buffers = buf});
   }
 };
 

@@ -21,8 +21,8 @@
 #pragma once
 #ifndef CLOUDBUS_ASYNC_SERVICE_IMPL_HPP
 #define CLOUDBUS_ASYNC_SERVICE_IMPL_HPP
-#include "segment/detail/with_lock.hpp"
-#include "segment/service/async_service.hpp"
+#include "net/detail/with_lock.hpp"
+#include "net/service/async_service.hpp"
 
 #include <stdexec/execution.hpp>
 namespace cloudbus::service {

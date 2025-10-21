@@ -7,6 +7,8 @@ set(TEST_NAMES
   test_mock_setsockopt
   test_mock_bind
   test_mock_listen
+  test_mock_recvmsg
+  test_mock_accept
 )
 
 foreach(TEST_NAME IN LISTS TEST_NAMES)

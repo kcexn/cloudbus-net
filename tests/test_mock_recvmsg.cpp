@@ -24,10 +24,9 @@
 using namespace cloudbus::service;
 
 static int error = 0;
-int setsockopt(int __fd, int level, int optname, const void *optval,
-               socklen_t optlen)
+ssize_t recvmsg(int __fd, struct msghdr *__message, int flags)
 {
-  errno = static_cast<int>(std::errc::interrupted);
+  errno = static_cast<int>(std::errc::bad_file_descriptor);
   error = errno;
   return -1;
 }
@@ -42,15 +41,7 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
   explicit echo_block_service(socket_address<T> address) : Base(address)
   {}
 
-  bool initialized = false;
-  auto initialize(const socket_handle &sock) -> std::error_code
-  {
-    if (initialized)
-      return std::make_error_code(std::errc::invalid_argument);
-
-    initialized = true;
-    return {};
-  }
+  auto initialize(const socket_handle &sock) -> std::error_code { return {}; }
 
   auto echo(async_context &ctx, const socket_dialog &socket,
             const std::shared_ptr<read_context> &rmsg,
@@ -76,11 +67,12 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
                   std::shared_ptr<read_context> rmsg,
                   std::span<const std::byte> buf) -> void
   {
-    echo(ctx, socket, rmsg, {.buffers = buf});
+    if (buf.data())
+      echo(ctx, socket, rmsg, {.buffers = buf});
   }
 };
 
-TEST_F(AsyncTcpServiceTest, SetSockOptError)
+TEST_F(AsyncTcpServiceTest, RecvMsgError)
 {
   using namespace io::socket;
 
@@ -100,8 +92,18 @@ TEST_F(AsyncTcpServiceTest, SetSockOptError)
   };
 
   service.start(ctx);
-  EXPECT_TRUE(ctx.scope.get_stop_token().stop_requested());
-  EXPECT_EQ(error, static_cast<int>(std::errc::interrupted));
+  {
+    ASSERT_FALSE(ctx.scope.get_stop_token().stop_requested());
+
+    using namespace io;
+    auto sock = socket_handle(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    addr->sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    ASSERT_EQ(connect(sock, addr), 0);
+    ctx.poller.wait();
+
+    ASSERT_EQ(error, static_cast<int>(std::errc::bad_file_descriptor));
+  }
 
   ctx.signal(ctx.terminate);
   while (ctx.poller.wait());
