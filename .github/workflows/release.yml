@@ -13,7 +13,7 @@ jobs:
       contents: write
     steps:
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090 # Full SHA for v2.4.1
       with:
         draft: false
         prerelease: false
