@@ -26,36 +26,6 @@
 
 #include <stdexec/execution.hpp>
 namespace cloudbus::service {
-
-auto async_context::signal(int signum) -> void
-{
-  assert(signum >= 0 && signum < END && "signum must be a valid signal.");
-  sigmask.fetch_or(1 << signum);
-  if (interrupt)
-    interrupt();
-}
-
-auto async_context::interrupt_type::operator()() const -> void
-{
-  using namespace detail;
-  auto func = with_lock(std::unique_lock{mtx_}, [&] { return fn_; });
-  func();
-}
-
-auto async_context::interrupt_type::operator=(
-    std::function<void()> func) noexcept -> interrupt_type &
-{
-  std::lock_guard lock{mtx_};
-  fn_ = std::move(func);
-  return *this;
-}
-
-async_context::interrupt_type::operator bool() const noexcept
-{
-  std::lock_guard lock{mtx_};
-  return static_cast<bool>(fn_);
-}
-
 template <ServiceLike Service>
 template <typename Fn>
   requires std::is_invocable_r_v<bool, Fn>

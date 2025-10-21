@@ -18,10 +18,11 @@
  * @brief This file defines an asynchronous tcp service.
  */
 #pragma once
-#include <system_error>
 #ifndef CLOUDBUS_ASYNC_TCP_SERVICE_IMPL_HPP
 #define CLOUDBUS_ASYNC_TCP_SERVICE_IMPL_HPP
 #include "segment/service/async_tcp_service.hpp"
+
+#include <system_error>
 namespace cloudbus::service {
 template <typename TCPStreamHandler>
 template <typename T>

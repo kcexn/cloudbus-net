@@ -19,8 +19,8 @@
  * @brief This file defines the asynchronous service.
  */
 #pragma once
-#ifndef CLOUDBUS_ASYNC_SERVICE_IMPL_HPP
-#define CLOUDBUS_ASYNC_SERVICE_IMPL_HPP
+#ifndef CLOUDBUS_ASYNC_CONTEXT_IMPL_HPP
+#define CLOUDBUS_ASYNC_CONTEXT_IMPL_HPP
 #include "segment/detail/with_lock.hpp"
 #include "segment/service/async_service.hpp"
 
@@ -56,4 +56,4 @@ inline async_context::interrupt_type::operator bool() const noexcept
   return static_cast<bool>(fn_);
 }
 } // namespace cloudbus::service
-#endif // CLOUDBUS_ASYNC_SERVICE_IMPL_HPP
+#endif // CLOUDBUS_ASYNC_CONTEXT_IMPL_HPP

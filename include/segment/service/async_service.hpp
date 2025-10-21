@@ -51,11 +51,11 @@ struct async_context : detail::immovable {
   class interrupt_type {
   public:
     /** @brief Calls the underlying interrupt. */
-    auto operator()() const -> void;
+    inline auto operator()() const -> void;
     /** @brief Assigns a function to the underlying interrupt. */
-    auto operator=(std::function<void()> func) noexcept -> interrupt_type &;
+    inline auto operator=(std::function<void()> func) noexcept -> interrupt_type &;
     /** @brief Tests to see if the interrupt has been assigned to. */
-    explicit operator bool() const noexcept;
+    inline explicit operator bool() const noexcept;
 
   private:
     /** @brief The underlying interrupt function. */
@@ -157,6 +157,7 @@ private:
 
 } // namespace cloudbus::service
 
+#include "impl/async_context_impl.hpp" // IWYU pragma: export
 #include "impl/async_service_impl.hpp" // IWYU pragma: export
 
 #endif // CLOUDBUS_ASYNC_SERVICE_HPP
