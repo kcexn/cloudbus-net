@@ -1,0 +1,35 @@
+# Doxyfile for Cloudbus Segment
+
+PROJECT_NAME           = "Cloudbus Segment"
+PROJECT_NUMBER         =
+PROJECT_BRIEF          = "Segment Component for cloudbus"
+PROJECT_LOGO           =
+
+OUTPUT_DIRECTORY       = docs
+FULL_PATH_NAMES        = YES
+STRIP_FROM_PATH        = include/
+STRIP_FROM_INC_PATH    = @CMAKE_SOURCE_DIR@/include
+
+EXCLUDE_SYMBOLS        = *_H *_HPP
+HIDE_UNDOC_CLASSES     = YES
+INTERNAL_DOCS          = NO
+
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+WARN_AS_ERROR          = NO
+WARN_FORMAT            = "$file:$line: $text"
+
+INPUT                  = @DOXYGEN_INPUT_FILES@
+FILE_PATTERNS          = *.c \
+                         *.cpp \
+                         *.h \
+                         *.hpp \
+                         *.md
+USE_MDFILE_AS_MAINPAGE = @CMAKE_SOURCE_DIR@/README.md
+
+INCLUDE_PATH           = @CMAKE_SOURCE_DIR@/include
+
+HAVE_DOT               = NO

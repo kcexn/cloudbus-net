@@ -1,0 +1,16 @@
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-narrowing-conversions,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -readability-braces-around-statements,
+  -readability-magic-numbers,
+  -readability-implicit-bool-conversion
+HeaderFilterRegex: '^include/.*'
+CheckOptions:
+  misc-trailing-whitespace.AllowEmptyLines: false
+

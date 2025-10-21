@@ -1,0 +1,13 @@
+# ide settings
+.vscode/
+
+# cmake related files
+build/
+Testing/
+CMakeUserPresets.json
+
+# clang settings
+.clangd
+
+# generated documentation
+/docs/*/
