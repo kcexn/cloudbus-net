@@ -45,7 +45,11 @@ namespace cloudbus::service {
  *   explicit noop_service(socket_address<T> address): Base(address)
  *   {}
  *
- *   auto initialize(const socket_handle &socket) -> void {}; // Optional.
+ *   // Optional.
+ *   auto initialize(const socket_handle &socket) -> std::error_code
+ *   {
+ *     return {};
+ *   }
  *
  *   auto operator()(async_context &ctx, const socket_dialog &socket,
  *                   std::shared_ptr<readbuf> rmsg,
