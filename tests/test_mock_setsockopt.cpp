@@ -106,4 +106,24 @@ TEST_F(AsyncTcpServiceTest, SetSockOptError)
   ctx.signal(ctx.terminate);
   while (ctx.poller.wait());
 }
+
+TEST_F(AsyncTcpServiceTest, ServiceNoHang)
+{
+  using namespace io::socket;
+  auto service = async_service<echo_block_service>();
+
+  std::mutex mtx;
+  std::condition_variable cvar;
+
+  auto addr = socket_address<sockaddr_in>();
+  addr->sin_family = AF_INET;
+  addr->sin_port = htons(8080);
+
+  ASSERT_FALSE(service.scope.get_stop_token().stop_requested());
+  service.start(mtx, cvar, addr);
+  {
+    auto lock = std::unique_lock{mtx};
+    cvar.wait(lock, [&] { return service.stopped.load(); });
+  }
+}
 // NOLINTEND

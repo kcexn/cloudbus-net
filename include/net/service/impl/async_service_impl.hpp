@@ -45,11 +45,10 @@ auto async_service<Service>::isr(async_scope &scope,
     return;
   }
 
-  auto recvmsg = io::recvmsg(socket, msg, 0) |
-                 then([=, &scope](auto len) noexcept {
-                   isr(scope, socket, std::move(handle));
-                 }) |
-                 upon_error([](auto &&err) noexcept {});
+  auto recvmsg =
+      io::recvmsg(socket, msg, 0) |
+      then([=, &scope](auto len) noexcept { isr(scope, socket, handle); }) |
+      upon_error([](auto &&err) noexcept {});
   scope.spawn(std::move(recvmsg));
 }
 
@@ -57,9 +56,9 @@ template <ServiceLike Service>
 auto async_service<Service>::stop(socket_type socket) noexcept -> void
 {
   interrupt = std::function<void()>{};
-  stopped = true;
   if (socket != io::socket::INVALID_SOCKET)
     io::socket::close(socket);
+  stopped = true;
 }
 
 template <ServiceLike Service>
@@ -77,7 +76,7 @@ auto async_service<Service>::start(std::mutex &mtx,
     if (!socketpair(AF_UNIX, SOCK_STREAM, 0, isockets.data()))
     {
       with_lock(std::unique_lock{mtx}, [&]() noexcept {
-        interrupt = [socket = isockets[1]]() noexcept {
+        interrupt = [&, socket = isockets[1]]() noexcept {
           static constexpr auto message = std::array<char, 1>{};
           io::sendmsg(socket, socket_message{.buffers = message}, 0);
         };
@@ -95,6 +94,10 @@ auto async_service<Service>::start(std::mutex &mtx,
       cvar.notify_all();
 
       service.start(static_cast<async_context &>(*this));
+
+      if (scope.get_stop_token().stop_requested())
+        signal(terminate);
+
       while (poller.wait());
     }
 
