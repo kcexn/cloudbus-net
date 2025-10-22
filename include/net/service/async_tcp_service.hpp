@@ -24,6 +24,8 @@
 namespace cloudbus::service {
 /**
  * @brief A ServiceLike Async TCP Service.
+ * @tparam StreamHandler The StreamHandler type that derives from
+ * async_tcp_service.
  * @note The default constructor of async_tcp_service is protected
  * so async_tcp_service can't be constructed without a stream handler
  * (which would be UB).
@@ -34,8 +36,6 @@ namespace cloudbus::service {
  * reader to restart the read loop. It also optionally specifies an initialize
  * member that can be used to configure the service socket. See `noop_service`
  * below for an example of how to specialize async_tcp_service.
- * @tparam StreamHandler The StreamHandler type that derives from
- * async_tcp_service.
  * @code
  * struct noop_service : public async_tcp_service<noop_service>
  * {
@@ -52,10 +52,10 @@ namespace cloudbus::service {
  *   }
  *
  *   auto operator()(async_context &ctx, const socket_dialog &socket,
- *                   std::shared_ptr<readbuf> rmsg,
+ *                   std::shared_ptr<read_context> rctx,
  *                   std::span<const std::byte> buf) -> void
  *   {
- *     reader(ctx, socket, std::move(rmsg));
+ *     reader(ctx, socket, std::move(rctx));
  *   }
  * };
  * @endcode
@@ -115,7 +115,7 @@ public:
    * @param rmsg A shared pointer to a mutable read buffer.
    */
   auto reader(async_context &ctx, const socket_dialog &socket,
-              std::shared_ptr<read_context> rmsg) -> void;
+              std::shared_ptr<read_context> rctx) -> void;
 
 protected:
   /** @brief Default constructor. */
@@ -139,8 +139,8 @@ private:
    * @param buf The data read from the socket in the last recvmsg.
    */
   auto emit(async_context &ctx, const socket_dialog &socket,
-            std::shared_ptr<read_context> rmsg,
-            std::span<const std::byte> buf) -> void;
+            std::shared_ptr<read_context> rctx = {},
+            std::span<const std::byte> buf = {}) -> void;
 
   /**
    * @brief Initializes the server socket with options. Delegates to

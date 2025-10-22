@@ -87,26 +87,24 @@ auto async_tcp_service<TCPStreamHandler>::acceptor(
 template <typename TCPStreamHandler>
 auto async_tcp_service<TCPStreamHandler>::reader(
     async_context &ctx, const socket_dialog &socket,
-    std::shared_ptr<read_context> rmsg) -> void
+    std::shared_ptr<read_context> rctx) -> void
 {
   using namespace stdexec;
   using namespace io::socket;
-  if (ctx.scope.get_stop_token().stop_requested())
+  if (!rctx || ctx.scope.get_stop_token().stop_requested())
     return;
 
   sender auto recvmsg =
-      io::recvmsg(socket, rmsg->msg, 0) |
-      then([&, socket, rmsg](auto &&len) mutable {
+      io::recvmsg(socket, rctx->msg, 0) |
+      then([&, socket, rctx](auto &&len) mutable {
         using size_type = std::size_t;
         if (!len)
-          return emit(ctx, socket, {}, std::span<std::byte>{});
+          return emit(ctx, socket);
 
-        auto buf = std::span{rmsg->buffer.data(), static_cast<size_type>(len)};
-        emit(ctx, socket, std::move(rmsg), buf);
+        auto buf = std::span{rctx->buffer.data(), static_cast<size_type>(len)};
+        emit(ctx, socket, std::move(rctx), buf);
       }) |
-      upon_error([&, socket](auto &&error) {
-        emit(ctx, socket, {}, std::span<std::byte>{});
-      });
+      upon_error([&, socket](auto &&error) { emit(ctx, socket); });
 
   ctx.scope.spawn(std::move(recvmsg));
 }
@@ -114,10 +112,10 @@ auto async_tcp_service<TCPStreamHandler>::reader(
 template <typename TCPStreamHandler>
 auto async_tcp_service<TCPStreamHandler>::emit(
     async_context &ctx, const socket_dialog &socket,
-    std::shared_ptr<read_context> rmsg, std::span<const std::byte> buf) -> void
+    std::shared_ptr<read_context> rctx, std::span<const std::byte> buf) -> void
 {
   auto &handle = static_cast<TCPStreamHandler &>(*this);
-  handle(ctx, socket, std::move(rmsg), buf);
+  handle(ctx, socket, std::move(rctx), buf);
 }
 
 template <typename TCPStreamHandler>

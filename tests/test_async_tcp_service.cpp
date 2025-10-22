@@ -45,7 +45,7 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
   }
 
   auto echo(async_context &ctx, const socket_dialog &socket,
-            const std::shared_ptr<read_context> &rmsg,
+            const std::shared_ptr<read_context> &rctx,
             socket_message msg) -> void
   {
     using namespace io::socket;
@@ -53,11 +53,11 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
 
     sender auto sendmsg =
         io::sendmsg(socket, msg, 0) |
-        then([&, socket, msg, rmsg](auto &&len) mutable {
-          if (auto buffers = std::move(msg.buffers); buffers += len)
-            return echo(ctx, socket, rmsg, {.buffers = buffers});
+        then([&, socket, rctx, bufs = msg.buffers](auto &&len) mutable {
+          if (bufs += len)
+            return echo(ctx, socket, std::move(rctx), {.buffers = bufs});
 
-          reader(ctx, socket, std::move(rmsg));
+          reader(ctx, socket, std::move(rctx));
         }) |
         upon_error([](auto &&error) {});
 
@@ -68,8 +68,7 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
                   std::shared_ptr<read_context> rmsg,
                   std::span<const std::byte> buf) -> void
   {
-    if (buf.data())
-      echo(ctx, socket, rmsg, {.buffers = buf});
+    echo(ctx, socket, rmsg, {.buffers = buf});
   }
 };
 
