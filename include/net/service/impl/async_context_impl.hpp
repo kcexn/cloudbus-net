@@ -1,17 +1,17 @@
 /* Copyright (C) 2025 Kevin Exton (kevin.exton@pm.me)
  *
- * Cloudbus is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
+ * cppnet is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Cloudbus is distributed in the hope that it will be useful,
+ * cppnet is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Affero General Public License
- * along with Cloudbus.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with cppnet.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /**
@@ -19,13 +19,13 @@
  * @brief This file defines the asynchronous service.
  */
 #pragma once
-#ifndef CLOUDBUS_ASYNC_CONTEXT_IMPL_HPP
-#define CLOUDBUS_ASYNC_CONTEXT_IMPL_HPP
+#ifndef CPPNET_ASYNC_CONTEXT_IMPL_HPP
+#define CPPNET_ASYNC_CONTEXT_IMPL_HPP
 #include "net/detail/with_lock.hpp"
 #include "net/service/async_service.hpp"
 
 #include <stdexec/execution.hpp>
-namespace cloudbus::service {
+namespace net::service {
 
 inline auto async_context::signal(int signum) -> void
 {
@@ -55,5 +55,5 @@ inline async_context::interrupt_type::operator bool() const noexcept
   std::lock_guard lock{mtx_};
   return static_cast<bool>(fn_);
 }
-} // namespace cloudbus::service
-#endif // CLOUDBUS_ASYNC_CONTEXT_IMPL_HPP
+} // namespace net::service
+#endif // CPPNET_ASYNC_CONTEXT_IMPL_HPP

@@ -1,27 +1,27 @@
 /* Copyright (C) 2025 Kevin Exton (kevin.exton@pm.me)
  *
- * Cloudbus is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
+ * cppnet is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Cloudbus is distributed in the hope that it will be useful,
+ * cppnet is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Affero General Public License
- * along with Cloudbus.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with cppnet.  If not, see <https://www.gnu.org/licenses/>.
  */
 /**
  * @file async_tcp_service.hpp
  * @brief This file declares an asynchronous tcp service.
  */
 #pragma once
-#ifndef CLOUDBUS_ASYNC_TCP_SERVICE_HPP
-#define CLOUDBUS_ASYNC_TCP_SERVICE_HPP
+#ifndef CPPNET_ASYNC_TCP_SERVICE_HPP
+#define CPPNET_ASYNC_TCP_SERVICE_HPP
 #include "async_service.hpp"
-namespace cloudbus::service {
+namespace net::service {
 /**
  * @brief A ServiceLike Async TCP Service.
  * @tparam StreamHandler The StreamHandler type that derives from
@@ -164,7 +164,7 @@ private:
   socket_address<sockaddr_in6> address_;
 };
 
-} // namespace cloudbus::service
+} // namespace net::service
 
 #include "impl/async_tcp_service_impl.hpp" // IWYU pragma: export
-#endif                                     // CLOUDBUS_ASYNC_TCP_SERVICE_HPP
+#endif                                     // CPPNET_ASYNC_TCP_SERVICE_HPP

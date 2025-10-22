@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
-project(cloudbus-net)
+project(cppnet)
 
-# cloudbus-segment requires at least C++20
+# net requires at least C++20
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
@@ -41,14 +41,14 @@ set(INCLUDE_DIRS
 # in submodules if the project has explicitly set BUILD_TESTING
 # by including CTest.
 if ((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME) OR BUILD_TESTING)
-	set(CB_NET_BUILD_TESTING_DEFAULT ON)
+	set(CPPNET_BUILD_TESTING_DEFAULT ON)
 else()
-	set(CB_NET_BUILD_TESTING_DEFAULT OFF)
+	set(CPPNET_BUILD_TESTING_DEFAULT OFF)
 endif()
-option(CB_NET_BUILD_TESTING "Enable testing." ${CB_NET_BUILD_TESTING_DEFAULT})
-if (CB_NET_BUILD_TESTING)
-  option(CB_NET_ENABLE_COVERAGE "Enable code-coverage." ON)
-  if (CB_NET_ENABLE_COVERAGE)
+option(CPPNET_BUILD_TESTING "Enable testing." ${CPPNET_BUILD_TESTING_DEFAULT})
+if (CPPNET_BUILD_TESTING)
+  option(CPPNET_ENABLE_COVERAGE "Enable code-coverage." ON)
+  if (CPPNET_ENABLE_COVERAGE)
     include(cmake/EnableCoverage.cmake)
   endif()
   # Enable tests.
@@ -56,7 +56,7 @@ if (CB_NET_BUILD_TESTING)
   include(cmake/EnableTests.cmake)
 endif()
 
-option(CB_NET_BUILD_DOCS "Build documentation." OFF)
-if (CB_NET_BUILD_DOCS)
+option(CPPNET_BUILD_DOCS "Build documentation." OFF)
+if (CPPNET_BUILD_DOCS)
   include(cmake/EnableDocs.cmake)
 endif()

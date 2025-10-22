@@ -64,7 +64,7 @@ jobs:
           cmake --preset debug \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCB_NET_BUILD_DOCS=OFF
+            -DCPPNET_BUILD_DOCS=OFF
 
       - name: Build with tests
         run: cmake --build --preset debug

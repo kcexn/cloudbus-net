@@ -1,29 +1,29 @@
 /* Copyright (C) 2025 Kevin Exton (kevin.exton@pm.me)
  *
- * Cloudbus is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
+ * cppnet is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published
  * by the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Cloudbus is distributed in the hope that it will be useful,
+ * cppnet is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Affero General Public License
- * along with Cloudbus.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with cppnet.  If not, see <https://www.gnu.org/licenses/>.
  */
 /**
  * @file with_lock.hpp
  * @brief This file defines with_lock.
  */
 #pragma once
-#ifndef CLOUDBUS_WITH_LOCK_HPP
-#define CLOUDBUS_WITH_LOCK_HPP
+#ifndef CPPNET_WITH_LOCK_HPP
+#define CPPNET_WITH_LOCK_HPP
 #include <mutex>
 #include <type_traits>
-/** @brief This namespace provides internal cloudbus implementation details. */
-namespace cloudbus::detail {
+/** @brief This namespace provides internal cppnet implementation details. */
+namespace net::detail {
 /**
  * @brief Runs the supplied functor while holding the acquired lock.
  * @tparam Fn The functor type.
@@ -38,5 +38,5 @@ auto with_lock(std::unique_lock<std::mutex> lock, Fn &&func) -> decltype(auto)
   return std::forward<Fn>(func)();
 }
 
-} // namespace cloudbus::detail
-#endif // CLOUDBUS_WITH_LOCK_HPP
+} // namespace net::detail
+#endif // CPPNET_WITH_LOCK_HPP
