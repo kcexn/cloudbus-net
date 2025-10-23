@@ -24,7 +24,7 @@ CPMAddPackage(
 CPMAddPackage(
   NAME asyncberkeley
   GITHUB_REPOSITORY kcexn/async-berkeley
-  GIT_TAG v0.1.3
+  GIT_TAG v0.1.4
   OPTIONS
   "IO_BUILD_TESTING OFF"
   "IO_BUILD_EXAMPLES OFF"
