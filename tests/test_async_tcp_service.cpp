@@ -72,9 +72,9 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
   }
 };
 
-class AsyncTcpServiceTest : public ::testing::Test {};
+class AsyncTcpServiceV4Test : public ::testing::Test {};
 
-TEST_F(AsyncTcpServiceTest, StartTest)
+TEST_F(AsyncTcpServiceV4Test, StartTest)
 {
   using namespace io::socket;
 
@@ -97,7 +97,7 @@ TEST_F(AsyncTcpServiceTest, StartTest)
   while (ctx.poller.wait());
 }
 
-TEST_F(AsyncTcpServiceTest, EchoTest)
+TEST_F(AsyncTcpServiceV4Test, EchoTest)
 {
   using namespace io::socket;
 
@@ -149,7 +149,7 @@ TEST_F(AsyncTcpServiceTest, EchoTest)
   while (ctx.poller.wait());
 }
 
-TEST_F(AsyncTcpServiceTest, InitializeError)
+TEST_F(AsyncTcpServiceV4Test, InitializeError)
 {
   using namespace io::socket;
 
@@ -176,7 +176,7 @@ TEST_F(AsyncTcpServiceTest, InitializeError)
   while (ctx.poller.wait());
 }
 
-TEST_F(AsyncTcpServiceTest, AsyncServiceTest)
+TEST_F(AsyncTcpServiceV4Test, AsyncServiceTest)
 {
   using namespace io::socket;
   using service_type = async_service<echo_block_service>;
@@ -200,6 +200,153 @@ TEST_F(AsyncTcpServiceTest, AsyncServiceTest)
     using namespace io;
     auto sock = socket_handle(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     addr->sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    ASSERT_EQ(connect(sock, addr), 0);
+
+    auto buf = std::array<char, 1>{'x'};
+    auto msg = socket_message{.buffers = buf};
+
+    const char *alphabet = "abcdefghijklmnopqrstuvwxyz";
+    auto *end = alphabet + 26;
+
+    for (auto *it = alphabet; it != end; ++it)
+    {
+      ASSERT_EQ(sendmsg(sock, socket_message{.buffers = std::span(it, 1)}, 0),
+                1);
+      ASSERT_EQ(recvmsg(sock, msg, 0), 1);
+      EXPECT_EQ(buf[0], *it);
+    }
+  }
+}
+
+class AsyncTcpServiceV6Test : public ::testing::Test {};
+
+TEST_F(AsyncTcpServiceV6Test, StartTestV6)
+{
+  using namespace io::socket;
+
+  auto ctx = async_context{};
+  auto addr = socket_address<sockaddr_in>();
+  addr->sin_family = AF_INET6;
+  auto service = echo_block_service{addr};
+
+  ctx.interrupt = [&] {
+    auto sigmask = ctx.sigmask.exchange(0);
+    for (int signum = 0; auto mask = (sigmask >> signum); ++signum)
+    {
+      if (mask & (1 << 0))
+        service.signal_handler(signum);
+    }
+  };
+
+  service.start(ctx);
+  ctx.signal(ctx.terminate);
+  while (ctx.poller.wait());
+}
+
+TEST_F(AsyncTcpServiceV6Test, EchoTest)
+{
+  using namespace io::socket;
+
+  auto ctx = async_context();
+  auto addr = socket_address<sockaddr_in6>();
+  addr->sin6_family = AF_INET6;
+  addr->sin6_port = htons(8080);
+  auto service = echo_block_service(addr);
+
+  ctx.interrupt = [&] {
+    auto sigmask = ctx.sigmask.exchange(0);
+    for (int signum = 0; auto mask = (sigmask >> signum); ++signum)
+    {
+      if (mask & (1 << 0))
+        service.signal_handler(signum);
+    }
+  };
+
+  ASSERT_FALSE(service.initialized);
+  service.start(ctx);
+  {
+    ASSERT_TRUE(service.initialized);
+    ASSERT_FALSE(ctx.scope.get_stop_token().stop_requested());
+
+    using namespace io;
+    auto sock = socket_handle(AF_INET6, SOCK_STREAM, 0);
+    addr->sin6_addr = IN6ADDR_LOOPBACK_INIT;
+
+    ASSERT_EQ(connect(sock, addr), 0);
+    ctx.poller.wait();
+
+    auto buf = std::array<char, 1>{'x'};
+    auto msg = socket_message{.buffers = buf};
+
+    const char *alphabet = "abcdefghijklmnopqrstuvwxyz";
+    auto *end = alphabet + 26;
+
+    for (auto *it = alphabet; it != end; ++it)
+    {
+      ASSERT_EQ(sendmsg(sock, socket_message{.buffers = std::span(it, 1)}, 0),
+                1);
+      ctx.poller.wait();
+      ASSERT_EQ(recvmsg(sock, msg, 0), 1);
+      EXPECT_EQ(buf[0], *it);
+    }
+  }
+
+  ctx.signal(ctx.terminate);
+  while (ctx.poller.wait());
+}
+
+TEST_F(AsyncTcpServiceV6Test, InitializeError)
+{
+  using namespace io::socket;
+
+  auto ctx = async_context();
+  auto addr = socket_address<sockaddr_in6>();
+  addr->sin6_family = AF_INET6;
+  addr->sin6_port = htons(8080);
+  auto service = echo_block_service(addr);
+  service.initialized = true;
+
+  ctx.interrupt = [&] {
+    auto sigmask = ctx.sigmask.exchange(0);
+    for (int signum = 0; auto mask = (sigmask >> signum); ++signum)
+    {
+      if (mask & (1 << 0))
+        service.signal_handler(signum);
+    }
+  };
+
+  service.start(ctx);
+  EXPECT_TRUE(ctx.scope.get_stop_token().stop_requested());
+
+  ctx.signal(ctx.terminate);
+  while (ctx.poller.wait());
+}
+
+TEST_F(AsyncTcpServiceV6Test, AsyncServiceTest)
+{
+  using namespace io::socket;
+  using service_type = async_service<echo_block_service>;
+
+  auto list = std::list<service_type>{};
+  auto &service = list.emplace_back();
+
+  std::mutex mtx;
+  std::condition_variable cvar;
+  auto addr = socket_address<sockaddr_in6>();
+  addr->sin6_family = AF_INET6;
+  addr->sin6_port = htons(8081);
+
+  service.start(mtx, cvar, addr);
+  {
+    auto lock = std::unique_lock{mtx};
+    cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
+  }
+  ASSERT_TRUE(static_cast<bool>(service.interrupt));
+  {
+    using namespace io;
+    auto sock = socket_handle(AF_INET6, SOCK_STREAM, 0);
+    addr->sin6_addr = IN6ADDR_LOOPBACK_INIT;
 
     ASSERT_EQ(connect(sock, addr), 0);
 

@@ -46,7 +46,7 @@ auto async_tcp_service<TCPStreamHandler>::start(async_context &ctx) noexcept
   using namespace io;
   using namespace io::socket;
 
-  auto sock = socket_handle(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  auto sock = socket_handle(address_->sin6_family, SOCK_STREAM, 0);
   if (auto error = initialize_(sock))
   {
     ctx.scope.request_stop();
@@ -57,7 +57,7 @@ auto async_tcp_service<TCPStreamHandler>::start(async_context &ctx) noexcept
     using namespace stdexec;
     ctx.scope.request_stop();
     sender auto connect =
-        io::connect(ctx.poller.emplace(AF_INET, SOCK_STREAM, IPPROTO_TCP),
+        io::connect(ctx.poller.emplace(address_->sin6_family, SOCK_STREAM, 0),
                     address_) |
         then([](auto status) {}) | upon_error([](auto &&error) {});
     ctx.scope.spawn(std::move(connect));
