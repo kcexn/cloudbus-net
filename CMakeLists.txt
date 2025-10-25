@@ -16,12 +16,18 @@ include(cmake/CPM.cmake)
 # Add stdexec as a dependency
 CPMAddPackage(
   URI "gh:NVIDIA/stdexec#main"
-  OPTIONS "STDEXEC_BUILD_EXAMPLES OFF")
+  OPTIONS
+    "STDEXEC_BUILD_EXAMPLES OFF"
+    "STDEXEC_BUILD_TESTING OFF"
+)
 
 # Add AsyncBerkeley as a dependency.
 CPMAddPackage(
   URI "gh:kcexn/async-berkeley@0.2.0"
-  OPTIONS "IO_BUILD_EXAMPLES OFF")
+  OPTIONS
+    "IO_BUILD_TESTING OFF"
+    "IO_BUILD_EXAMPLES OFF"
+)
 
 # Add cppnet targets.
 add_library(cppnet INTERFACE)
