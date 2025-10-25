@@ -1,34 +1,23 @@
 include(GoogleTest)
 
-set(TEST_NAMES
-  test_async_context
-  test_async_tcp_service
-  test_mock_socketpair
-  test_mock_setsockopt
-  test_mock_bind
-  test_mock_listen
-  test_mock_recvmsg
-  test_mock_accept
+set(
+  TEST_NAMES
+    test_async_context
+    test_async_tcp_service
+    test_mock_socketpair
+    test_mock_setsockopt
+    test_mock_bind
+    test_mock_listen
+    test_mock_recvmsg
+    test_mock_accept
 )
 
 foreach(TEST_NAME IN LISTS TEST_NAMES)
-  add_executable(
-    ${TEST_NAME}
-    ${TEST_NAME}.cpp
-  )
+  add_executable(${TEST_NAME} ${TEST_NAME}.cpp)
 
-  target_include_directories(
-    ${TEST_NAME}
-    PRIVATE
-    "${CMAKE_SOURCE_DIR}/include/"
-  )
+  target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include/)
 
-  target_link_libraries(
-    ${TEST_NAME}
-    PRIVATE
-    cppnet
-    GTest::gtest_main
-  )
+  target_link_libraries(${TEST_NAME} PRIVATE cppnet GTest::gtest_main)
 
   if(CPPNET_ENABLE_COVERAGE)
     target_link_libraries(${TEST_NAME} PRIVATE gcov)
