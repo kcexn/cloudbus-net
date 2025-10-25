@@ -17,18 +17,20 @@ foreach(TEST_NAME IN LISTS TEST_NAMES)
     ${TEST_NAME}.cpp
   )
 
-  target_include_directories(${TEST_NAME}
+  target_include_directories(
+    ${TEST_NAME}
     PRIVATE
-    "${INCLUDE_DIRS}"
+    "${CMAKE_SOURCE_DIR}/include/"
   )
 
   target_link_libraries(
     ${TEST_NAME}
     PRIVATE
+    cppnet
     GTest::gtest_main
   )
 
-  if(CB_SEGMENT_ENABLE_COVERAGE)
+  if(CPPNET_ENABLE_COVERAGE)
     target_link_libraries(${TEST_NAME} PRIVATE gcov)
   endif()
 

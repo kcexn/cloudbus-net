@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(cppnet)
+project(cppnet VERSION 0.2.4 LANGUAGES CXX)
 
 # net requires at least C++20
 set(CMAKE_CXX_STANDARD 20)
@@ -12,9 +12,7 @@ include(cmake/CPM.cmake)
 
 # Add stdexec as a dependency
 CPMAddPackage(
-  NAME stdexec
-  GITHUB_REPOSITORY NVIDIA/stdexec
-  GIT_TAG main # This will always pull the latest code from the `main` branch. You may also use a specific release version or tag
+  URI "gh:NVIDIA/stdexec#main"
   OPTIONS
   "STDEXEC_BUILD_TESTS OFF"
   "STDEXEC_BUILD_EXAMPLES OFF"
@@ -22,19 +20,29 @@ CPMAddPackage(
 
 # Add AsyncBerkeley as a dependency.
 CPMAddPackage(
-  NAME asyncberkeley
-  GITHUB_REPOSITORY kcexn/async-berkeley
-  GIT_TAG v0.1.5
+  URI "gh:kcexn/async-berkeley#develop"
   OPTIONS
   "IO_BUILD_TESTING OFF"
   "IO_BUILD_EXAMPLES OFF"
 )
 
-# Include directories for build and distribution.
-set(INCLUDE_DIRS
-  "${CMAKE_SOURCE_DIR}/include/"
-  "${CMAKE_BINARY_DIR}/_deps/stdexec-src/include/"
-  "${CMAKE_BINARY_DIR}/_deps/asyncberkeley-src/include/"
+# Add cppnet targets.
+add_library(cppnet INTERFACE)
+target_include_directories(
+  cppnet
+  INTERFACE
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+target_link_libraries(
+  cppnet
+  INTERFACE
+  asyncberk
+  STDEXEC::stdexec
+)
+install(
+  DIRECTORY ${PROJECT_SOURCE_DIR}/include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 # Enable testing by default if this is a top-level project or
@@ -45,15 +53,29 @@ if ((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME) OR BUILD_TESTING)
 else()
 	set(CPPNET_BUILD_TESTING_DEFAULT OFF)
 endif()
+
 option(CPPNET_BUILD_TESTING "Enable testing." ${CPPNET_BUILD_TESTING_DEFAULT})
 if (CPPNET_BUILD_TESTING)
+# Add GoogleTest
+  message(STATUS "Configure tests with GoogleTest")
+  CPMAddPackage(
+    NAME googletest
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.zip"
+    EXCLUDE_FROM_ALL YES
+    SYSTEM YES
+  )
+  # For Windows: Prevent overriding the parent project's compiler/linker settings
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
   option(CPPNET_ENABLE_COVERAGE "Enable code-coverage." ON)
   if (CPPNET_ENABLE_COVERAGE)
     include(cmake/EnableCoverage.cmake)
   endif()
   # Enable tests.
   include(CTest)
-  include(cmake/EnableTests.cmake)
+  add_subdirectory(tests)
+
+  message(STATUS "GoogleTest configured successfully")
 endif()
 
 option(CPPNET_BUILD_DOCS "Build documentation." OFF)
