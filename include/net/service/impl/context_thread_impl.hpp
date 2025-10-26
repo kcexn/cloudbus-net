@@ -19,18 +19,19 @@
  * @brief This file defines the asynchronous service.
  */
 #pragma once
-#ifndef CPPNET_ASYNC_SERVICE_IMPL_HPP
-#define CPPNET_ASYNC_SERVICE_IMPL_HPP
+#ifndef CPPNET_CONTEXT_THREAD_IMPL_HPP
+#define CPPNET_CONTEXT_THREAD_IMPL_HPP
 #include "net/detail/with_lock.hpp"
-#include "net/service/async_service.hpp"
+#include "net/service/context_thread.hpp"
 
 #include <stdexec/execution.hpp>
 namespace net::service {
 template <ServiceLike Service>
 template <typename Fn>
   requires std::is_invocable_r_v<bool, Fn>
-auto async_service<Service>::isr(async_scope &scope,
-                                 const socket_dialog &socket, Fn handle) -> void
+auto context_thread<Service>::isr(async_scope &scope,
+                                  const socket_dialog &socket,
+                                  Fn handle) -> void
 {
   using namespace io::socket;
   using namespace stdexec;
@@ -53,7 +54,7 @@ auto async_service<Service>::isr(async_scope &scope,
 }
 
 template <ServiceLike Service>
-auto async_service<Service>::stop(socket_type socket) noexcept -> void
+auto context_thread<Service>::stop(socket_type socket) noexcept -> void
 {
   interrupt = std::function<void()>{};
   if (socket != io::socket::INVALID_SOCKET)
@@ -63,9 +64,9 @@ auto async_service<Service>::stop(socket_type socket) noexcept -> void
 
 template <ServiceLike Service>
 template <typename... Args>
-auto async_service<Service>::start(std::mutex &mtx,
-                                   std::condition_variable &cvar,
-                                   Args &&...args) -> void
+auto context_thread<Service>::start(std::mutex &mtx,
+                                    std::condition_variable &cvar,
+                                    Args &&...args) -> void
 {
   server_ = std::thread([&]() noexcept {
     using namespace detail;
@@ -106,10 +107,10 @@ auto async_service<Service>::start(std::mutex &mtx,
   });
 }
 
-template <ServiceLike Service> async_service<Service>::~async_service()
+template <ServiceLike Service> context_thread<Service>::~context_thread()
 {
   signal(terminate);
   server_.join();
 }
 } // namespace net::service
-#endif // CPPNET_ASYNC_SERVICE_IMPL_HPP
+#endif // CPPNET_CONTEXT_THREAD_IMPL_HPP

@@ -14,12 +14,12 @@
  * along with cppnet.  If not, see <https://www.gnu.org/licenses/>.
  */
 /**
- * @file async_service.hpp
+ * @file context_thread.hpp
  * @brief This file declares an asynchronous service.
  */
 #pragma once
-#ifndef CPPNET_ASYNC_SERVICE_HPP
-#define CPPNET_ASYNC_SERVICE_HPP
+#ifndef CPPNET_CONTEXT_THREAD_HPP
+#define CPPNET_CONTEXT_THREAD_HPP
 #include "net/detail/concepts.hpp"
 #include "net/detail/immovable.hpp"
 
@@ -41,9 +41,9 @@ struct async_context : detail::immovable {
   /** @brief Asynchronous scope type. */
   using async_scope = exec::async_scope;
   /** @brief The io multiplexer type. */
-  using multiplexer = io::execution::poll_multiplexer;
+  using multiplexer_type = io::execution::poll_multiplexer;
   /** @brief The io triggers type. */
-  using triggers = io::execution::basic_triggers<multiplexer>;
+  using triggers = io::execution::basic_triggers<multiplexer_type>;
   /** @brief The signal mask type. */
   using signal_mask = std::uint64_t;
 
@@ -95,9 +95,10 @@ struct async_context : detail::immovable {
  *
  * @tparam Service The service to run.
  */
-template <ServiceLike Service> class async_service : public async_context {
-  using socket_dialog =
-      io::socket::socket_dialog<io::execution::poll_multiplexer>;
+template <ServiceLike Service> class context_thread : public async_context {
+  /** @brief The socket dialog type. */
+  using socket_dialog = triggers::socket_dialog;
+  /** @brief The socket type. */
   using socket_type = io::socket::native_socket_type;
 
   /**
@@ -124,15 +125,15 @@ template <ServiceLike Service> class async_service : public async_context {
 
 public:
   /** @brief Default constructor. */
-  async_service() = default;
+  context_thread() = default;
   /** @brief Deleted copy constructor. */
-  async_service(const async_service &) = delete;
+  context_thread(const context_thread &) = delete;
   /** @brief Deleted move constructor. */
-  async_service(async_service &&) = delete;
+  context_thread(context_thread &&) = delete;
   /** @brief Deleted copy assignment. */
-  auto operator=(const async_service &) -> async_service & = delete;
+  auto operator=(const context_thread &) -> context_thread & = delete;
   /** @brief Deleted move assignment. */
-  auto operator=(async_service &&) -> async_service & = delete;
+  auto operator=(context_thread &&) -> context_thread & = delete;
 
   /**
    * @brief Start the asynchronous service.
@@ -149,7 +150,7 @@ public:
              Args &&...args) -> void;
 
   /** @brief The destructor signals the thread before joining it. */
-  ~async_service();
+  ~context_thread();
 
 private:
   /** @brief The thread that serves the asynchronous service. */
@@ -158,7 +159,7 @@ private:
 
 } // namespace net::service
 
-#include "impl/async_context_impl.hpp" // IWYU pragma: export
-#include "impl/async_service_impl.hpp" // IWYU pragma: export
+#include "impl/async_context_impl.hpp"  // IWYU pragma: export
+#include "impl/context_thread_impl.hpp" // IWYU pragma: export
 
-#endif // CPPNET_ASYNC_SERVICE_HPP
+#endif // CPPNET_CONTEXT_THREAD_HPP

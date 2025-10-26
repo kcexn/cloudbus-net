@@ -15,8 +15,8 @@
  */
 
 // NOLINTBEGIN
-#include "net/service/async_service.hpp"
 #include "net/service/async_tcp_service.hpp"
+#include "net/service/context_thread.hpp"
 
 #include <gtest/gtest.h>
 
@@ -110,7 +110,7 @@ TEST_F(AsyncTcpServiceTest, SetSockOptError)
 TEST_F(AsyncTcpServiceTest, ServiceNoHang)
 {
   using namespace io::socket;
-  auto service = async_service<echo_block_service>();
+  auto service = context_thread<echo_block_service>();
 
   std::mutex mtx;
   std::condition_variable cvar;

@@ -20,7 +20,7 @@
 #pragma once
 #ifndef CPPNET_ASYNC_TCP_SERVICE_HPP
 #define CPPNET_ASYNC_TCP_SERVICE_HPP
-#include "async_service.hpp"
+#include "context_thread.hpp"
 namespace net::service {
 /**
  * @brief A ServiceLike Async TCP Service.
@@ -69,7 +69,7 @@ public:
   /** @brief The async scope type. */
   using async_scope = async_context::async_scope;
   /** @brief The io multiplexer type. */
-  using multiplexer_type = async_context::multiplexer;
+  using multiplexer_type = async_context::multiplexer_type;
   /** @brief The socket handle type. */
   using socket_handle = io::socket::socket_handle;
   /** @brief The socket dialog type. */

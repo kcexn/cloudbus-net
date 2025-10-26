@@ -15,8 +15,8 @@
  */
 
 // NOLINTBEGIN
-#include "net/service/async_service.hpp"
 #include "net/service/async_tcp_service.hpp"
+#include "net/service/context_thread.hpp"
 
 #include <gtest/gtest.h>
 

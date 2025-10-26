@@ -22,7 +22,7 @@
 #ifndef CPPNET_ASYNC_CONTEXT_IMPL_HPP
 #define CPPNET_ASYNC_CONTEXT_IMPL_HPP
 #include "net/detail/with_lock.hpp"
-#include "net/service/async_service.hpp"
+#include "net/service/context_thread.hpp"
 
 #include <stdexec/execution.hpp>
 namespace net::service {

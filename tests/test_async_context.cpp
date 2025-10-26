@@ -15,7 +15,7 @@
  */
 
 // NOLINTBEGIN
-#include "net/service/async_service.hpp"
+#include "net/service/context_thread.hpp"
 
 #include <gtest/gtest.h>
 
@@ -62,7 +62,7 @@ struct test_service {
 
 TEST_F(AsyncContextTest, AsyncServiceTest)
 {
-  auto list = std::list<async_service<test_service>>{};
+  auto list = std::list<context_thread<test_service>>{};
   auto &service = list.emplace_back();
   ASSERT_FALSE(static_cast<bool>(service.interrupt));
 
@@ -87,7 +87,7 @@ TEST_F(AsyncContextTest, AsyncServiceTest)
 
 TEST_F(AsyncContextTest, TestUser1Signal)
 {
-  auto list = std::list<async_service<test_service>>{};
+  auto list = std::list<context_thread<test_service>>{};
   auto &service = list.emplace_back();
 
   std::mutex mtx;

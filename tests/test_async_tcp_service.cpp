@@ -15,8 +15,8 @@
  */
 
 // NOLINTBEGIN
-#include "net/service/async_service.hpp"
 #include "net/service/async_tcp_service.hpp"
+#include "net/service/context_thread.hpp"
 
 #include <gtest/gtest.h>
 
@@ -179,7 +179,7 @@ TEST_F(AsyncTcpServiceV4Test, InitializeError)
 TEST_F(AsyncTcpServiceV4Test, AsyncServiceTest)
 {
   using namespace io::socket;
-  using service_type = async_service<echo_block_service>;
+  using service_type = context_thread<echo_block_service>;
 
   auto list = std::list<service_type>{};
   auto &service = list.emplace_back();
@@ -326,7 +326,7 @@ TEST_F(AsyncTcpServiceV6Test, InitializeError)
 TEST_F(AsyncTcpServiceV6Test, AsyncServiceTest)
 {
   using namespace io::socket;
-  using service_type = async_service<echo_block_service>;
+  using service_type = context_thread<echo_block_service>;
 
   auto list = std::list<service_type>{};
   auto &service = list.emplace_back();
