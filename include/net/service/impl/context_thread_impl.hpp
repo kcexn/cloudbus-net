@@ -116,7 +116,7 @@ auto context_thread<Service>::start(std::mutex &mtx,
         if (next <= 0)
         {
           if (token.stop_requested())
-            signal(terminate);
+            service.signal_handler(terminate);
 
           next = INTERVAL_MS;
         }
