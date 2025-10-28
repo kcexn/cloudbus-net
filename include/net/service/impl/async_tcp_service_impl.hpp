@@ -75,7 +75,7 @@ auto async_tcp_service<TCPStreamHandler>::acceptor(
 
   sender auto accept = io::accept(socket) | then([&, socket](auto accepted) {
                          auto [dialog, addr] = std::move(accepted);
-                         reader(ctx, dialog, std::make_shared<read_context>());
+                         emit(ctx, dialog, std::make_shared<read_context>());
                          acceptor(ctx, socket);
                        }) |
                        upon_error([](auto &&error) {});

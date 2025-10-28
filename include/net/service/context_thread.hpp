@@ -162,6 +162,15 @@ public:
 private:
   /** @brief The thread that serves the asynchronous service. */
   std::thread server_;
+
+  /**
+   * @brief Runs the event loop.
+   * @tparam StopToken The stop token type.
+   * @param service The service to run on the event loop.
+   * @param token The stop token to use with the service.
+   */
+  template <typename StopToken>
+  auto run(Service &service, const StopToken &token) -> void;
 };
 
 } // namespace net::service

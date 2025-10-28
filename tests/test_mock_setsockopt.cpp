@@ -97,6 +97,8 @@ TEST_F(AsyncTcpServiceTest, SetSockOptError)
       if (mask & (1 << 0))
         service.signal_handler(signum);
     }
+    if (sigmask & (1 << ctx.terminate))
+      ctx.scope.request_stop();
   };
 
   service.start(ctx);

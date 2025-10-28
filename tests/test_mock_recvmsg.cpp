@@ -67,8 +67,7 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
                   std::shared_ptr<read_context> rmsg,
                   std::span<const std::byte> buf) -> void
   {
-    if (buf.data())
-      echo(ctx, socket, rmsg, {.buffers = buf});
+    echo(ctx, socket, rmsg, {.buffers = buf});
   }
 };
 

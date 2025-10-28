@@ -26,6 +26,7 @@
 
 #include <stdexec/execution.hpp>
 namespace net::service {
+
 template <ServiceLike Service>
 template <typename Fn>
   requires std::is_invocable_r_v<bool, Fn>
@@ -71,8 +72,6 @@ auto context_thread<Service>::start(std::mutex &mtx,
   server_ = std::thread([&]() noexcept {
     using namespace detail;
     using namespace io::socket;
-    using namespace stdexec;
-    using std::chrono::duration_cast;
 
     auto service = Service{std::forward<Args>(args)...};
     auto isockets = std::array<socket_type, 2>{INVALID_SOCKET, INVALID_SOCKET};
@@ -101,28 +100,10 @@ auto context_thread<Service>::start(std::mutex &mtx,
       service.start(static_cast<async_context &>(*this));
 
       const auto token = scope.get_stop_token();
-      int next = 0;
-      auto start = clock::now();
+      if (token.stop_requested())
+        signal(terminate);
 
-      auto is_empty = false;
-      scope.spawn(poller.on_empty() |
-                  then([&]() noexcept { is_empty = true; }));
-
-      while (poller.wait_for(next) || !is_empty)
-      {
-        const auto now = clock::now();
-
-        next -= duration_cast<duration>(now - start).count();
-        if (next <= 0)
-        {
-          if (token.stop_requested())
-            service.signal_handler(terminate);
-
-          next = INTERVAL_MS;
-        }
-
-        start = now;
-      }
+      run(service, token);
     }
 
     with_lock(std::unique_lock{mtx}, [&]() noexcept { stop(isockets[1]); });
@@ -134,6 +115,36 @@ template <ServiceLike Service> context_thread<Service>::~context_thread()
 {
   signal(terminate);
   server_.join();
+}
+
+template <ServiceLike Service>
+template <typename StopToken>
+auto context_thread<Service>::run(Service &service,
+                                  const StopToken &token) -> void
+{
+  using namespace stdexec;
+  using std::chrono::duration_cast;
+
+  int next = 0;
+  auto start = clock::now();
+  auto is_empty = false;
+  scope.spawn(poller.on_empty() | then([&]() noexcept { is_empty = true; }));
+
+  while (poller.wait_for(next) || !is_empty)
+  {
+    const auto now = clock::now();
+
+    next -= duration_cast<duration>(now - start).count();
+    if (next <= 0)
+    {
+      if (token.stop_requested())
+        service.signal_handler(terminate);
+
+      next = INTERVAL_MS;
+    }
+
+    start = now;
+  }
 }
 } // namespace net::service
 #endif // CPPNET_CONTEXT_THREAD_IMPL_HPP
