@@ -44,8 +44,7 @@ auto async_tcp_service<TCPStreamHandler>::signal_handler(int signum) noexcept
       static_cast<TCPStreamHandler *>(this)->stop();
     }
 
-    if (stop_)
-      stop_();
+    stop_();
   }
 }
 
@@ -62,12 +61,6 @@ auto async_tcp_service<TCPStreamHandler>::start(async_context &ctx) noexcept
     ctx.scope.request_stop();
     return;
   }
-
-  stop_ = [&] {
-    using io::connect;
-    ctx.scope.request_stop();
-    connect(socket_handle(address_->sin6_family, SOCK_STREAM, 0), address_);
-  };
 
   acceptor(ctx, ctx.poller.emplace(std::move(sock)));
 }
@@ -156,6 +149,12 @@ auto async_tcp_service<TCPStreamHandler>::initialize_(
     return {errno, std::system_category()};
 
   return {};
+}
+
+template <typename TCPStreamHandler>
+auto async_tcp_service<TCPStreamHandler>::stop_() -> void
+{
+  io::connect(socket_handle(address_->sin6_family, SOCK_STREAM, 0), address_);
 }
 
 } // namespace net::service

@@ -94,6 +94,8 @@ TEST_F(AsyncTcpServiceV4Test, StartTest)
       if (mask & (1 << 0))
         service.signal_handler(signum);
     }
+    if (sigmask & (1 << ctx.terminate))
+      ctx.scope.request_stop();
   };
 
   service.start(ctx);
@@ -118,6 +120,8 @@ TEST_F(AsyncTcpServiceV4Test, EchoTest)
       if (mask & (1 << 0))
         service.signal_handler(signum);
     }
+    if (sigmask & (1 << ctx.terminate))
+      ctx.scope.request_stop();
   };
 
   ASSERT_FALSE(service.initialized);
@@ -171,6 +175,8 @@ TEST_F(AsyncTcpServiceV4Test, InitializeError)
       if (mask & (1 << 0))
         service.signal_handler(signum);
     }
+    if (sigmask & (1 << ctx.terminate))
+      ctx.scope.request_stop();
   };
 
   service.start(ctx);
@@ -249,6 +255,8 @@ TEST_F(AsyncTcpServiceV6Test, StartTestV6)
       if (mask & (1 << 0))
         service.signal_handler(signum);
     }
+    if (sigmask & (1 << ctx.terminate))
+      ctx.scope.request_stop();
   };
 
   service.start(ctx);
@@ -273,6 +281,8 @@ TEST_F(AsyncTcpServiceV6Test, EchoTest)
       if (mask & (1 << 0))
         service.signal_handler(signum);
     }
+    if (sigmask & (1 << ctx.terminate))
+      ctx.scope.request_stop();
   };
 
   ASSERT_FALSE(service.initialized);
@@ -326,6 +336,8 @@ TEST_F(AsyncTcpServiceV6Test, InitializeError)
       if (mask & (1 << 0))
         service.signal_handler(signum);
     }
+    if (sigmask & (1 << ctx.terminate))
+      ctx.scope.request_stop();
   };
 
   service.start(ctx);

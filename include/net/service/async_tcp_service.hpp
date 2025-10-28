@@ -161,7 +161,7 @@ private:
   initialize_(const socket_handle &socket) -> std::error_code;
 
   /** @brief Stop the service. */
-  std::function<void()> stop_;
+  auto stop_() -> void;
   /**
    * @brief The service address.
    * @note sockaddr_in6 is large enough to store either an IPV4 or an IPV6
