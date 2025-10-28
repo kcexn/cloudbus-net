@@ -23,7 +23,7 @@ CPMAddPackage(
 
 # Add AsyncBerkeley as a dependency.
 CPMAddPackage(
-  URI "gh:kcexn/async-berkeley#develop"
+  URI "gh:kcexn/async-berkeley@0.3.0"
   OPTIONS
     "IO_BUILD_TESTING OFF"
     "IO_BUILD_EXAMPLES OFF"
