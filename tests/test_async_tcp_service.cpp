@@ -26,6 +26,8 @@
 #include <arpa/inet.h>
 using namespace net::service;
 
+static std::atomic<bool> stopped = false;
+
 struct echo_block_service : public async_tcp_service<echo_block_service> {
   using Base = async_tcp_service<echo_block_service>;
   using socket_message = io::socket::socket_message<>;
@@ -43,6 +45,8 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
     initialized = true;
     return {};
   }
+
+  auto stop() noexcept -> void { stopped = !stopped; }
 
   auto echo(async_context &ctx, const socket_dialog &socket,
             const std::shared_ptr<read_context> &rctx,
@@ -181,8 +185,7 @@ TEST_F(AsyncTcpServiceV4Test, AsyncServiceTest)
   using namespace io::socket;
   using service_type = context_thread<echo_block_service>;
 
-  auto list = std::list<service_type>{};
-  auto &service = list.emplace_back();
+  auto service = service_type{};
 
   std::mutex mtx;
   std::condition_variable cvar;
@@ -217,6 +220,15 @@ TEST_F(AsyncTcpServiceV4Test, AsyncServiceTest)
       EXPECT_EQ(buf[0], *it);
     }
   }
+
+  auto flag = stopped.load();
+  service.signal(service.terminate);
+  {
+    auto lock = std::unique_lock{mtx};
+    cvar.wait(lock, [&] { return service.stopped.load(); });
+  }
+
+  ASSERT_NE(flag, stopped.load());
 }
 
 class AsyncTcpServiceV6Test : public ::testing::Test {};
@@ -364,5 +376,14 @@ TEST_F(AsyncTcpServiceV6Test, AsyncServiceTest)
       EXPECT_EQ(buf[0], *it);
     }
   }
+
+  auto flag = stopped.load();
+  service.signal(service.terminate);
+  {
+    auto lock = std::unique_lock{mtx};
+    cvar.wait(lock, [&] { return service.stopped.load(); });
+  }
+
+  ASSERT_NE(flag, stopped.load());
 }
 // NOLINTEND

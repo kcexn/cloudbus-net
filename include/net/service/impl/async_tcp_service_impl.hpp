@@ -32,11 +32,21 @@ async_tcp_service<TCPStreamHandler>::async_tcp_service(
 {}
 
 template <typename TCPStreamHandler>
-auto async_tcp_service<TCPStreamHandler>::signal_handler(
-    int signum) const noexcept -> void
+auto async_tcp_service<TCPStreamHandler>::signal_handler(int signum) noexcept
+    -> void
 {
-  if (signum == terminate && stop_)
-    stop_();
+  if (signum == terminate)
+  {
+    if constexpr (requires(TCPStreamHandler handler) {
+                    { handler.stop() } -> std::same_as<void>;
+                  })
+    {
+      static_cast<TCPStreamHandler *>(this)->stop();
+    }
+
+    if (stop_)
+      stop_();
+  }
 }
 
 template <typename TCPStreamHandler>
@@ -54,13 +64,9 @@ auto async_tcp_service<TCPStreamHandler>::start(async_context &ctx) noexcept
   }
 
   stop_ = [&] {
-    using namespace stdexec;
+    using io::connect;
     ctx.scope.request_stop();
-    sender auto connect =
-        io::connect(ctx.poller.emplace(address_->sin6_family, SOCK_STREAM, 0),
-                    address_) |
-        then([](auto status) {}) | upon_error([](auto &&error) {});
-    ctx.scope.spawn(std::move(connect));
+    connect(socket_handle(address_->sin6_family, SOCK_STREAM, 0), address_);
   };
 
   acceptor(ctx, ctx.poller.emplace(std::move(sock)));

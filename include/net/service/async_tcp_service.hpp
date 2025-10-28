@@ -51,6 +51,12 @@ namespace net::service {
  *     return {};
  *   }
  *
+ *   // Optional.
+ *   auto stop() -> void
+ *   {
+ *     return {};
+ *   }
+ *
  *   auto operator()(async_context &ctx, const socket_dialog &socket,
  *                   std::shared_ptr<read_context> rctx,
  *                   std::span<const std::byte> buf) -> void
@@ -96,7 +102,7 @@ public:
    * @brief handle signals.
    * @param signum The signal number to handle.
    */
-  auto signal_handler(int signum) const noexcept -> void;
+  auto signal_handler(int signum) noexcept -> void;
   /**
    * @brief Start the service on the context.
    * @param ctx The async context to start the service on.
