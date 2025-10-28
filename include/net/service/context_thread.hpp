@@ -100,6 +100,13 @@ template <ServiceLike Service> class context_thread : public async_context {
   using socket_dialog = triggers::socket_dialog;
   /** @brief The socket type. */
   using socket_type = io::socket::native_socket_type;
+  /** @brief The clock type. */
+  using clock = std::chrono::steady_clock;
+  /** @brief The duration type. */
+  using duration = std::chrono::milliseconds;
+
+  /** @brief Internal context loop interval.*/
+  static constexpr int INTERVAL_MS = 2000;
 
   /**
    * @brief An interrupt service routine.

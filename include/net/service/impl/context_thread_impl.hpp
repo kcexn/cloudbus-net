@@ -71,6 +71,8 @@ auto context_thread<Service>::start(std::mutex &mtx,
   server_ = std::thread([&]() noexcept {
     using namespace detail;
     using namespace io::socket;
+    using namespace stdexec;
+    using std::chrono::duration_cast;
 
     auto service = Service{std::forward<Args>(args)...};
     auto isockets = std::array<socket_type, 2>{INVALID_SOCKET, INVALID_SOCKET};
@@ -78,8 +80,10 @@ auto context_thread<Service>::start(std::mutex &mtx,
     {
       with_lock(std::unique_lock{mtx}, [&]() noexcept {
         interrupt = [&, socket = isockets[1]]() noexcept {
+          using io::sendmsg;
+
           static constexpr auto message = std::array<char, 1>{};
-          io::sendmsg(socket, socket_message{.buffers = message}, 0);
+          sendmsg(socket, socket_message{.buffers = message}, 0);
         };
       });
 
@@ -96,10 +100,29 @@ auto context_thread<Service>::start(std::mutex &mtx,
 
       service.start(static_cast<async_context &>(*this));
 
-      if (scope.get_stop_token().stop_requested())
-        signal(terminate);
+      const auto token = scope.get_stop_token();
+      int next = 0;
+      auto start = clock::now();
 
-      while (poller.wait());
+      auto is_empty = false;
+      scope.spawn(poller.on_empty() |
+                  then([&]() noexcept { is_empty = true; }));
+
+      while (poller.wait_for(next) || !is_empty)
+      {
+        const auto now = clock::now();
+
+        next -= duration_cast<duration>(now - start).count();
+        if (next <= 0)
+        {
+          if (token.stop_requested())
+            signal(terminate);
+
+          next = INTERVAL_MS;
+        }
+
+        start = now;
+      }
     }
 
     with_lock(std::unique_lock{mtx}, [&]() noexcept { stop(isockets[1]); });
