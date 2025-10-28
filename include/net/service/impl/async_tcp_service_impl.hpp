@@ -97,7 +97,7 @@ auto async_tcp_service<TCPStreamHandler>::reader(
 {
   using namespace stdexec;
   using namespace io::socket;
-  if (!rctx || ctx.scope.get_stop_token().stop_requested())
+  if (!rctx)
     return;
 
   sender auto recvmsg =
