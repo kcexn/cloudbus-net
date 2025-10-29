@@ -34,10 +34,8 @@ namespace net::service {
  * that defines what the service should do with bytes it reads off the wire.
  * StreamHandler must define an operator() overload that eventually calls
  * reader to restart the read loop. It also optionally specifies an initialize
- * member that can be used to configure the service socket, and a stop member
- * that can be used to gracefully drain and stop UDP connections upon receiving
- * a terminate signal. See `noop_service` below for an example of how to
- * specialize async_udp_service.
+ * member that can be used to configure the service socket. See `noop_service`
+ * below for an example of how to specialize async_udp_service.
  * @code
  * struct noop_service : public async_udp_service<noop_service>
  * {
