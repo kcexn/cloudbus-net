@@ -62,6 +62,8 @@ auto async_tcp_service<TCPStreamHandler>::start(async_context &ctx) noexcept
     return;
   }
 
+  acceptor_sockfd_ = static_cast<socket_type>(sock);
+
   acceptor(ctx, ctx.poller.emplace(std::move(sock)));
 }
 
@@ -70,8 +72,6 @@ auto async_tcp_service<TCPStreamHandler>::acceptor(
     async_context &ctx, const socket_dialog &socket) -> void
 {
   using namespace stdexec;
-  if (ctx.scope.get_stop_token().stop_requested())
-    return;
 
   sender auto accept = io::accept(socket) | then([&, socket](auto accepted) {
                          auto [dialog, addr] = std::move(accepted);
@@ -154,7 +154,10 @@ auto async_tcp_service<TCPStreamHandler>::initialize_(
 template <typename TCPStreamHandler>
 auto async_tcp_service<TCPStreamHandler>::stop_() -> void
 {
-  io::connect(socket_handle(address_->sin6_family, SOCK_STREAM, 0), address_);
+  using namespace io::socket;
+
+  auto sockfd = acceptor_sockfd_.exchange(INVALID_SOCKET);
+  shutdown(sockfd, SHUT_RD);
 }
 
 } // namespace net::service

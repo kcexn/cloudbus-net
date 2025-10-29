@@ -109,12 +109,6 @@ public:
    */
   auto start(async_context &ctx) noexcept -> void;
   /**
-   * @brief Accept new connections on a listening socket.
-   * @param ctx The async context to start the acceptor on.
-   * @param socket The socket to listen for connections on.
-   */
-  auto acceptor(async_context &ctx, const socket_dialog &socket) -> void;
-  /**
    * @brief Read data from a connected socket.
    * @param ctx The async context to start the reader on.
    * @param socket the socket to read data from.
@@ -135,6 +129,15 @@ protected:
   explicit async_tcp_service(socket_address<T> address) noexcept;
 
 private:
+  /** @brief The native socket type. */
+  using socket_type = io::socket::native_socket_type;
+
+  /**
+   * @brief Accept new connections on a listening socket.
+   * @param ctx The async context to start the acceptor on.
+   * @param socket The socket to listen for connections on.
+   */
+  auto acceptor(async_context &ctx, const socket_dialog &socket) -> void;
   /**
    * @brief Emits a span of bytes buf read from socket that must be handled by
    * the derived stream handler.
@@ -168,6 +171,8 @@ private:
    * address.
    */
   socket_address<sockaddr_in6> address_;
+  /** @brief The native acceptor socket handle. */
+  std::atomic<socket_type> acceptor_sockfd_ = io::socket::INVALID_SOCKET;
 };
 
 } // namespace net::service
