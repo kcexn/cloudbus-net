@@ -88,8 +88,13 @@ public:
 
   /** @brief A read context. */
   struct read_context {
-    /** @brief The read buffer size. */
-    static constexpr std::size_t BUFSIZE = 1024UL;
+    /**
+     * @brief The read buffer size.
+     * @details 64KiB was chosen for consistency as it is
+     * the maximum size of an atomic read for protocols
+     * like UDP and SCTP.
+     */
+    static constexpr std::size_t BUFSIZE = 64 * 1024UL;
     /** @brief The read buffer type. */
     using buffer_type = std::array<std::byte, BUFSIZE>;
     /** @brief The socket message type. */
