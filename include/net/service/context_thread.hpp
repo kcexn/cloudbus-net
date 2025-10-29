@@ -162,6 +162,10 @@ public:
 private:
   /** @brief The thread that serves the asynchronous service. */
   std::thread server_;
+  /** @brief Mutex for thread-safety. */
+  std::mutex mtx_;
+  /** @brief Flag that guards against starting a thread twice. */
+  bool started_{false};
 
   /**
    * @brief Runs the event loop.

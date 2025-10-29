@@ -237,6 +237,27 @@ TEST_F(AsyncTcpServiceV4Test, AsyncServiceTest)
   ASSERT_NE(flag, stopped.load());
 }
 
+TEST_F(AsyncTcpServiceV4Test, AsyncServiceStartTwiceTest)
+{
+  using namespace io::socket;
+  using service_type = context_thread<echo_block_service>;
+
+  auto service = service_type{};
+
+  std::mutex mtx;
+  std::condition_variable cvar;
+  auto addr = socket_address<sockaddr_in>();
+  addr->sin_family = AF_INET;
+  addr->sin_port = htons(8080);
+
+  service.start(mtx, cvar, addr);
+  EXPECT_THROW(service.start(mtx, cvar, addr), std::invalid_argument);
+  {
+    auto lock = std::unique_lock{mtx};
+    cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
+  }
+}
+
 class AsyncTcpServiceV6Test : public ::testing::Test {};
 
 TEST_F(AsyncTcpServiceV6Test, StartTestV6)
@@ -397,5 +418,26 @@ TEST_F(AsyncTcpServiceV6Test, AsyncServiceTest)
   }
 
   ASSERT_NE(flag, stopped.load());
+}
+
+TEST_F(AsyncTcpServiceV6Test, AsyncServiceStartTwiceTest)
+{
+  using namespace io::socket;
+  using service_type = context_thread<echo_block_service>;
+
+  auto service = service_type{};
+
+  std::mutex mtx;
+  std::condition_variable cvar;
+  auto addr = socket_address<sockaddr_in>();
+  addr->sin_family = AF_INET6;
+  addr->sin_port = htons(8081);
+
+  service.start(mtx, cvar, addr);
+  EXPECT_THROW(service.start(mtx, cvar, addr), std::invalid_argument);
+  {
+    auto lock = std::unique_lock{mtx};
+    cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
+  }
 }
 // NOLINTEND

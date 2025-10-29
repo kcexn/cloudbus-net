@@ -69,6 +69,10 @@ auto context_thread<Service>::start(std::mutex &mtx,
                                     std::condition_variable &cvar,
                                     Args &&...args) -> void
 {
+  auto lock = std::lock_guard{mtx};
+  if (started_)
+    throw std::invalid_argument("context_thread can't be started twice.");
+
   server_ = std::thread([&]() noexcept {
     using namespace detail;
     using namespace io::socket;
@@ -109,6 +113,8 @@ auto context_thread<Service>::start(std::mutex &mtx,
     with_lock(std::unique_lock{mtx}, [&]() noexcept { stop(isockets[1]); });
     cvar.notify_all();
   });
+
+  started_ = true;
 }
 
 template <ServiceLike Service> context_thread<Service>::~context_thread()
