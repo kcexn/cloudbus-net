@@ -34,7 +34,9 @@ namespace net::service {
  * that defines what the service should do with bytes it reads off the wire.
  * StreamHandler must define an operator() overload that eventually calls
  * reader to restart the read loop. It also optionally specifies an initialize
- * member that can be used to configure the service socket. See `noop_service`
+ * member that can be used to configure the service socket, and a stop member
+ * that can be used to gracefully drain and stop TCP connections upon receiving a
+ * terminate signal. See `noop_service`
  * below for an example of how to specialize async_tcp_service.
  * @code
  * struct noop_service : public async_tcp_service<noop_service>
@@ -45,17 +47,19 @@ namespace net::service {
  *   explicit noop_service(socket_address<T> address): Base(address)
  *   {}
  *
- *   // Optional.
+ *   // Optional. initialize() is called by service.start() and is
+ *   // used to set optional socket and file descriptor options before
+ *   // The TCP server starts to accept connections.
  *   auto initialize(const socket_handle &socket) -> std::error_code
  *   {
  *     return {};
  *   }
  *
- *   // Optional.
- *   auto stop() -> void
- *   {
- *     return {};
- *   }
+ *   // Optional. stop() is called each time the service receives a terminate signal.
+ *   // Terminate signals can be received more than once if TCP connections aren't
+ *   // drained quickly enough. This provides opportunities for the application to
+ *   // force close the connections.
+ *   auto stop() -> void {}
  *
  *   auto operator()(async_context &ctx, const socket_dialog &socket,
  *                   std::shared_ptr<read_context> rctx,
