@@ -14,7 +14,7 @@
  * along with cppnet.  If not, see <https://www.gnu.org/licenses/>.
  */
 /**
- * @file async_udp_service.hpp
+ * @file async_udp_service_impl.hpp
  * @brief This file declares an asynchronous udp service.
  */
 #pragma once
