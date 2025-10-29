@@ -14,34 +14,34 @@
  * along with cppnet.  If not, see <https://www.gnu.org/licenses/>.
  */
 /**
- * @file async_tcp_service.hpp
- * @brief This file declares an asynchronous tcp service.
+ * @file async_udp_service.hpp
+ * @brief This file declares an asynchronous udp service.
  */
 #pragma once
-#ifndef CPPNET_ASYNC_TCP_SERVICE_HPP
-#define CPPNET_ASYNC_TCP_SERVICE_HPP
+#ifndef CPPNET_ASYNC_UDP_SERVICE_HPP
+#define CPPNET_ASYNC_UDP_SERVICE_HPP
 #include "context_thread.hpp"
 namespace net::service {
 /**
- * @brief A ServiceLike Async TCP Service.
+ * @brief A ServiceLike Async UDP Service.
  * @tparam StreamHandler The StreamHandler type that derives from
- * async_tcp_service.
- * @note The default constructor of async_tcp_service is protected
- * so async_tcp_service can't be constructed without a stream handler
+ * async_udp_service.
+ * @note The default constructor of async_udp_service is protected
+ * so async_udp_service can't be constructed without a stream handler
  * (which would be UB).
- * @details async_tcp_service is a CRTP base class compliant with the
+ * @details async_udp_service is a CRTP base class compliant with the
  * ServiceLike concept. It must be used with an inheriting CRTP specialization
  * that defines what the service should do with bytes it reads off the wire.
  * StreamHandler must define an operator() overload that eventually calls
  * reader to restart the read loop. It also optionally specifies an initialize
  * member that can be used to configure the service socket, and a stop member
- * that can be used to gracefully drain and stop TCP connections upon receiving
+ * that can be used to gracefully drain and stop UDP connections upon receiving
  * a terminate signal. See `noop_service` below for an example of how to
- * specialize async_tcp_service.
+ * specialize async_udp_service.
  * @code
- * struct noop_service : public async_tcp_service<noop_service>
+ * struct noop_service : public async_udp_service<noop_service>
  * {
- *   using Base = async_tcp_service<noop_service>;
+ *   using Base = async_udp_service<noop_service>;
  *
  *   template <typename T>
  *   explicit noop_service(socket_address<T> address): Base(address)
@@ -49,16 +49,11 @@ namespace net::service {
  *
  *   // Optional. initialize() is called by service.start() and is
  *   // used to set optional socket and file descriptor options before
- *   // The TCP server starts to accept connections.
+ *   // The UDP server starts to read from the socket.
  *   auto initialize(const socket_handle &socket) -> std::error_code
  *   {
  *     return {};
  *   }
- *
- *   // Optional. stop() is called each time the service receives a
- *   // terminate signal. Terminate signals can be received more than
- *   // once.
- *   auto stop() -> void {}
  *
  *   auto operator()(async_context &ctx, const socket_dialog &socket,
  *                   std::shared_ptr<read_context> rctx,
@@ -69,7 +64,7 @@ namespace net::service {
  * };
  * @endcode
  */
-template <typename TCPStreamHandler> class async_tcp_service {
+template <typename UDPStreamHandler> class async_udp_service {
 public:
   /** @brief Templated socket address type. */
   template <typename T> using socket_address = io::socket::socket_address<T>;
@@ -88,17 +83,31 @@ public:
 
   /** @brief A read context. */
   struct read_context {
-    /** @brief The read buffer size. */
-    static constexpr std::size_t BUFSIZE = 1024UL;
+    /**
+     * @brief The read buffer size.
+     * @details The buffer size is set to the maximum
+     * UDP datagram size of 64KiB.
+     */
+    static constexpr std::size_t BUFSIZE = 64 * 1024UL;
     /** @brief The read buffer type. */
     using buffer_type = std::array<std::byte, BUFSIZE>;
-    /** @brief The socket message type. */
-    using socket_message = io::socket::socket_message<>;
+    /**
+     * @brief Socket address type.
+     * @details sockaddr_in6 is a large enough type to store both
+     * ipv4 and ipv6 socket address details.
+     */
+    using socket_address = io::socket::socket_address<sockaddr_in6>;
+    /**
+     * @brief The socket message type.
+     * @details sockaddr_in6 is a large enough type to store both
+     * ipv4 and ipv6 socket address details.
+     */
+    using socket_message = io::socket::socket_message<sockaddr_in6>;
 
     /** @brief The read buffer. */
     buffer_type buffer{};
     /** @brief The read socket message. */
-    socket_message msg{.buffers = buffer};
+    socket_message msg{.address = socket_address{}, .buffers = buffer};
   };
 
   /**
@@ -122,25 +131,19 @@ public:
 
 protected:
   /** @brief Default constructor. */
-  async_tcp_service() = default;
+  async_udp_service() = default;
   /**
    * @brief Socket address constructor.
    * @tparam T The socket address type.
    * @param address The service address to bind.
    */
   template <typename T>
-  explicit async_tcp_service(socket_address<T> address) noexcept;
+  explicit async_udp_service(socket_address<T> address) noexcept;
 
 private:
   /** @brief The native socket type. */
   using socket_type = io::socket::native_socket_type;
 
-  /**
-   * @brief Accept new connections on a listening socket.
-   * @param ctx The async context to start the acceptor on.
-   * @param socket The socket to listen for connections on.
-   */
-  auto acceptor(async_context &ctx, const socket_dialog &socket) -> void;
   /**
    * @brief Emits a span of bytes buf read from socket that must be handled by
    * the derived stream handler.
@@ -158,7 +161,7 @@ private:
    * @brief Initializes the server socket with options. Delegates to
    * StreamHandler::initialize if it is defined.
    * @details The base class initialize_ always sets the SO_REUSEADDR flag,
-   * so that the TCP server can be restarted quickly.
+   * so that the UDP server can be restarted quickly.
    * @param socket The socket handle to configure.
    * @return A default constructed error code if successful, otherwise a system
    * error code.
@@ -174,11 +177,11 @@ private:
    * address.
    */
   socket_address<sockaddr_in6> address_;
-  /** @brief The native acceptor socket handle. */
-  std::atomic<socket_type> acceptor_sockfd_ = io::socket::INVALID_SOCKET;
+  /** @brief The native server socket handle. */
+  std::atomic<socket_type> server_sockfd_ = io::socket::INVALID_SOCKET;
 };
 
 } // namespace net::service
 
-#include "impl/async_tcp_service_impl.hpp" // IWYU pragma: export
-#endif                                     // CPPNET_ASYNC_TCP_SERVICE_HPP
+#include "impl/async_udp_service_impl.hpp" // IWYU pragma: export
+#endif                                     // CPPNET_ASYNC_UDP_SERVICE_HPP

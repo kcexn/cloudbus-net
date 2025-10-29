@@ -15,25 +15,21 @@
  */
 
 // NOLINTBEGIN
-#include "net/service/async_tcp_service.hpp"
+#include "net/service/async_udp_service.hpp"
 #include "net/service/context_thread.hpp"
 
 #include <gtest/gtest.h>
 
-#include <cassert>
-#include <list>
-
 #include <arpa/inet.h>
+#include <netinet/in.h>
 using namespace net::service;
 
-static std::atomic<bool> stopped = false;
-
-struct echo_block_service : public async_tcp_service<echo_block_service> {
-  using Base = async_tcp_service<echo_block_service>;
+struct echo_service : public async_udp_service<echo_service> {
+  using Base = async_udp_service<echo_service>;
   using socket_message = io::socket::socket_message<>;
 
   template <typename T>
-  explicit echo_block_service(socket_address<T> address) : Base(address)
+  explicit echo_service(socket_address<T> address) : Base(address)
   {}
 
   bool initialized = false;
@@ -46,8 +42,6 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
     return {};
   }
 
-  auto stop() noexcept -> void { stopped = !stopped; }
-
   auto echo(async_context &ctx, const socket_dialog &socket,
             const std::shared_ptr<read_context> &rctx,
             socket_message msg) -> void
@@ -55,37 +49,44 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
     using namespace io::socket;
     using namespace stdexec;
 
-    sender auto sendmsg =
-        io::sendmsg(socket, msg, 0) |
-        then([&, socket, rctx, bufs = msg.buffers](auto &&len) mutable {
-          if (bufs += len)
-            return echo(ctx, socket, std::move(rctx), {.buffers = bufs});
-
-          reader(ctx, socket, std::move(rctx));
-        }) |
-        upon_error([](auto &&error) {});
+    sender auto sendmsg = io::sendmsg(socket, msg, 0) |
+                          then([&, socket, rctx, msg](auto &&len) mutable {
+                            reader(ctx, socket, std::move(rctx));
+                          }) |
+                          upon_error([](auto &&error) {});
 
     ctx.scope.spawn(std::move(sendmsg));
   }
 
   auto operator()(async_context &ctx, const socket_dialog &socket,
-                  std::shared_ptr<read_context> rmsg,
+                  std::shared_ptr<read_context> rctx,
                   std::span<const std::byte> buf) -> void
   {
-    echo(ctx, socket, rmsg, {.buffers = buf});
+    using namespace io::socket;
+    if (!rctx)
+      return;
+
+    auto address = *rctx->msg.address;
+    if (address->sin6_family == AF_INET)
+    {
+      const auto *ptr =
+          reinterpret_cast<struct sockaddr *>(std::addressof(*address));
+      address = socket_address<sockaddr_in>(ptr);
+    }
+    echo(ctx, socket, rctx, {.address = address, .buffers = buf});
   }
 };
 
-class AsyncTcpServiceV4Test : public ::testing::Test {};
+class AsyncUdpServiceV4Test : public ::testing::Test {};
 
-TEST_F(AsyncTcpServiceV4Test, StartTest)
+TEST_F(AsyncUdpServiceV4Test, StartTest)
 {
   using namespace io::socket;
 
   auto ctx = async_context{};
   auto addr = socket_address<sockaddr_in>();
   addr->sin_family = AF_INET;
-  auto service = echo_block_service{addr};
+  auto service = echo_service{addr};
 
   ctx.interrupt = [&] {
     auto sigmask = ctx.sigmask.exchange(0);
@@ -103,7 +104,7 @@ TEST_F(AsyncTcpServiceV4Test, StartTest)
   while (ctx.poller.wait());
 }
 
-TEST_F(AsyncTcpServiceV4Test, EchoTest)
+TEST_F(AsyncUdpServiceV4Test, EchoTest)
 {
   using namespace io::socket;
 
@@ -111,7 +112,7 @@ TEST_F(AsyncTcpServiceV4Test, EchoTest)
   auto addr = socket_address<sockaddr_in>();
   addr->sin_family = AF_INET;
   addr->sin_port = htons(8080);
-  auto service = echo_block_service(addr);
+  auto service = echo_service(addr);
 
   ctx.interrupt = [&] {
     auto sigmask = ctx.sigmask.exchange(0);
@@ -131,24 +132,26 @@ TEST_F(AsyncTcpServiceV4Test, EchoTest)
     ASSERT_FALSE(ctx.scope.get_stop_token().stop_requested());
 
     using namespace io;
-    auto sock = socket_handle(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    auto sock = socket_handle(AF_INET, SOCK_DGRAM, 0);
     addr->sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    ASSERT_EQ(connect(sock, addr), 0);
-    ctx.poller.wait();
-
     auto buf = std::array<char, 1>{'x'};
-    auto msg = socket_message{.buffers = buf};
+    auto msg = socket_message<sockaddr_in>{
+        .address = {socket_address<sockaddr_in>()}, .buffers = buf};
 
     const char *alphabet = "abcdefghijklmnopqrstuvwxyz";
     auto *end = alphabet + 26;
 
     for (auto *it = alphabet; it != end; ++it)
     {
-      ASSERT_EQ(sendmsg(sock, socket_message{.buffers = std::span(it, 1)}, 0),
+      ASSERT_EQ(sendmsg(sock,
+                        socket_message{.address = {addr},
+                                       .buffers = std::span(it, 1)},
+                        0),
                 1);
       ctx.poller.wait();
       ASSERT_EQ(recvmsg(sock, msg, 0), 1);
+      EXPECT_EQ(*msg.address, addr);
       EXPECT_EQ(buf[0], *it);
     }
   }
@@ -157,7 +160,7 @@ TEST_F(AsyncTcpServiceV4Test, EchoTest)
   while (ctx.poller.wait());
 }
 
-TEST_F(AsyncTcpServiceV4Test, InitializeError)
+TEST_F(AsyncUdpServiceV4Test, InitializeError)
 {
   using namespace io::socket;
 
@@ -165,7 +168,7 @@ TEST_F(AsyncTcpServiceV4Test, InitializeError)
   auto addr = socket_address<sockaddr_in>();
   addr->sin_family = AF_INET;
   addr->sin_port = htons(8080);
-  auto service = echo_block_service(addr);
+  auto service = echo_service(addr);
   service.initialized = true;
 
   ctx.interrupt = [&] {
@@ -186,10 +189,10 @@ TEST_F(AsyncTcpServiceV4Test, InitializeError)
   while (ctx.poller.wait());
 }
 
-TEST_F(AsyncTcpServiceV4Test, AsyncServiceTest)
+TEST_F(AsyncUdpServiceV4Test, AsyncServiceTest)
 {
   using namespace io::socket;
-  using service_type = context_thread<echo_block_service>;
+  using service_type = context_thread<echo_service>;
 
   auto service = service_type{};
 
@@ -204,49 +207,43 @@ TEST_F(AsyncTcpServiceV4Test, AsyncServiceTest)
     auto lock = std::unique_lock{mtx};
     cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
   }
-  ASSERT_TRUE(static_cast<bool>(service.interrupt));
+  ASSERT_FALSE(service.stopped.load());
   {
     using namespace io;
-    auto sock = socket_handle(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    auto sock = socket_handle(AF_INET, SOCK_DGRAM, 0);
     addr->sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    ASSERT_EQ(connect(sock, addr), 0);
-
     auto buf = std::array<char, 1>{'x'};
-    auto msg = socket_message{.buffers = buf};
+    auto msg = socket_message<sockaddr_in>{
+        .address = {socket_address<sockaddr_in>()}, .buffers = buf};
 
     const char *alphabet = "abcdefghijklmnopqrstuvwxyz";
     auto *end = alphabet + 26;
 
     for (auto *it = alphabet; it != end; ++it)
     {
-      ASSERT_EQ(sendmsg(sock, socket_message{.buffers = std::span(it, 1)}, 0),
+      ASSERT_EQ(sendmsg(sock,
+                        socket_message<sockaddr_in>{
+                            .address = {addr}, .buffers = std::span(it, 1)},
+                        0),
                 1);
       ASSERT_EQ(recvmsg(sock, msg, 0), 1);
+      EXPECT_EQ(*msg.address, addr);
       EXPECT_EQ(buf[0], *it);
     }
   }
-
-  auto flag = stopped.load();
-  service.signal(service.terminate);
-  {
-    auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.stopped.load(); });
-  }
-
-  ASSERT_NE(flag, stopped.load());
 }
 
-class AsyncTcpServiceV6Test : public ::testing::Test {};
+class AsyncUdpServiceV6Test : public ::testing::Test {};
 
-TEST_F(AsyncTcpServiceV6Test, StartTestV6)
+TEST_F(AsyncUdpServiceV6Test, StartTestV6)
 {
   using namespace io::socket;
 
   auto ctx = async_context{};
-  auto addr = socket_address<sockaddr_in>();
-  addr->sin_family = AF_INET6;
-  auto service = echo_block_service{addr};
+  auto addr = socket_address<sockaddr_in6>();
+  addr->sin6_family = AF_INET6;
+  auto service = echo_service{addr};
 
   ctx.interrupt = [&] {
     auto sigmask = ctx.sigmask.exchange(0);
@@ -264,15 +261,15 @@ TEST_F(AsyncTcpServiceV6Test, StartTestV6)
   while (ctx.poller.wait());
 }
 
-TEST_F(AsyncTcpServiceV6Test, EchoTest)
+TEST_F(AsyncUdpServiceV6Test, EchoTest)
 {
   using namespace io::socket;
 
   auto ctx = async_context();
   auto addr = socket_address<sockaddr_in6>();
   addr->sin6_family = AF_INET6;
-  addr->sin6_port = htons(8080);
-  auto service = echo_block_service(addr);
+  addr->sin6_port = htons(8081);
+  auto service = echo_service(addr);
 
   ctx.interrupt = [&] {
     auto sigmask = ctx.sigmask.exchange(0);
@@ -292,24 +289,26 @@ TEST_F(AsyncTcpServiceV6Test, EchoTest)
     ASSERT_FALSE(ctx.scope.get_stop_token().stop_requested());
 
     using namespace io;
-    auto sock = socket_handle(AF_INET6, SOCK_STREAM, 0);
+    auto sock = socket_handle(AF_INET6, SOCK_DGRAM, 0);
     addr->sin6_addr = IN6ADDR_LOOPBACK_INIT;
 
-    ASSERT_EQ(connect(sock, addr), 0);
-    ctx.poller.wait();
-
     auto buf = std::array<char, 1>{'x'};
-    auto msg = socket_message{.buffers = buf};
+    auto msg = socket_message<sockaddr_in6>{
+        .address = {socket_address<sockaddr_in6>()}, .buffers = buf};
 
     const char *alphabet = "abcdefghijklmnopqrstuvwxyz";
     auto *end = alphabet + 26;
 
     for (auto *it = alphabet; it != end; ++it)
     {
-      ASSERT_EQ(sendmsg(sock, socket_message{.buffers = std::span(it, 1)}, 0),
+      ASSERT_EQ(sendmsg(sock,
+                        socket_message<sockaddr_in6>{
+                            .address = {addr}, .buffers = std::span(it, 1)},
+                        0),
                 1);
       ctx.poller.wait();
       ASSERT_EQ(recvmsg(sock, msg, 0), 1);
+      EXPECT_EQ(*msg.address, addr);
       EXPECT_EQ(buf[0], *it);
     }
   }
@@ -318,15 +317,15 @@ TEST_F(AsyncTcpServiceV6Test, EchoTest)
   while (ctx.poller.wait());
 }
 
-TEST_F(AsyncTcpServiceV6Test, InitializeError)
+TEST_F(AsyncUdpServiceV6Test, InitializeError)
 {
   using namespace io::socket;
 
   auto ctx = async_context();
   auto addr = socket_address<sockaddr_in6>();
   addr->sin6_family = AF_INET6;
-  addr->sin6_port = htons(8080);
-  auto service = echo_block_service(addr);
+  addr->sin6_port = htons(8081);
+  auto service = echo_service(addr);
   service.initialized = true;
 
   ctx.interrupt = [&] {
@@ -347,13 +346,12 @@ TEST_F(AsyncTcpServiceV6Test, InitializeError)
   while (ctx.poller.wait());
 }
 
-TEST_F(AsyncTcpServiceV6Test, AsyncServiceTest)
+TEST_F(AsyncUdpServiceV6Test, AsyncServiceTest)
 {
   using namespace io::socket;
-  using service_type = context_thread<echo_block_service>;
+  using service_type = context_thread<echo_service>;
 
-  auto list = std::list<service_type>{};
-  auto &service = list.emplace_back();
+  auto service = service_type{};
 
   std::mutex mtx;
   std::condition_variable cvar;
@@ -366,36 +364,30 @@ TEST_F(AsyncTcpServiceV6Test, AsyncServiceTest)
     auto lock = std::unique_lock{mtx};
     cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
   }
-  ASSERT_TRUE(static_cast<bool>(service.interrupt));
+  ASSERT_FALSE(service.stopped.load());
   {
     using namespace io;
-    auto sock = socket_handle(AF_INET6, SOCK_STREAM, 0);
+    auto sock = socket_handle(AF_INET6, SOCK_DGRAM, 0);
     addr->sin6_addr = IN6ADDR_LOOPBACK_INIT;
 
-    ASSERT_EQ(connect(sock, addr), 0);
-
     auto buf = std::array<char, 1>{'x'};
-    auto msg = socket_message{.buffers = buf};
+    auto msg = socket_message<sockaddr_in6>{
+        .address = {socket_address<sockaddr_in6>()}, .buffers = buf};
 
     const char *alphabet = "abcdefghijklmnopqrstuvwxyz";
     auto *end = alphabet + 26;
 
     for (auto *it = alphabet; it != end; ++it)
     {
-      ASSERT_EQ(sendmsg(sock, socket_message{.buffers = std::span(it, 1)}, 0),
+      ASSERT_EQ(sendmsg(sock,
+                        socket_message<sockaddr_in6>{
+                            .address = {addr}, .buffers = std::span(it, 1)},
+                        0),
                 1);
       ASSERT_EQ(recvmsg(sock, msg, 0), 1);
+      EXPECT_EQ(*msg.address, addr);
       EXPECT_EQ(buf[0], *it);
     }
   }
-
-  auto flag = stopped.load();
-  service.signal(service.terminate);
-  {
-    auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.stopped.load(); });
-  }
-
-  ASSERT_NE(flag, stopped.load());
 }
 // NOLINTEND

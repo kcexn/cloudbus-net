@@ -62,9 +62,7 @@ struct test_service {
 
 TEST_F(AsyncContextTest, AsyncServiceTest)
 {
-  auto list = std::list<context_thread<test_service>>{};
-  auto &service = list.emplace_back();
-  ASSERT_FALSE(static_cast<bool>(service.interrupt));
+  auto service = context_thread<test_service>();
 
   std::mutex mtx;
   std::condition_variable cvar;
@@ -72,17 +70,36 @@ TEST_F(AsyncContextTest, AsyncServiceTest)
   service.start(mtx, cvar);
   {
     auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return static_cast<bool>(service.interrupt); });
+    cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
   }
-  EXPECT_TRUE(static_cast<bool>(service.interrupt));
+  ASSERT_FALSE(service.stopped.load());
   service.signal(service.terminate);
   {
     auto lock = std::unique_lock{mtx};
     cvar.wait(lock, [&] { return service.stopped.load(); });
   }
   EXPECT_TRUE(service.stopped);
-  list.erase(list.begin());
-  EXPECT_TRUE(list.empty());
+}
+
+TEST_F(AsyncContextTest, StartTwiceTest)
+{
+  auto service = context_thread<test_service>{};
+
+  std::mutex mtx;
+  std::condition_variable cvar;
+
+  service.start(mtx, cvar);
+  EXPECT_THROW(service.start(mtx, cvar), std::invalid_argument);
+  {
+    auto lock = std::unique_lock{mtx};
+    cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
+  }
+  ASSERT_FALSE(service.stopped.load());
+  service.signal(service.terminate);
+  {
+    auto lock = std::unique_lock{mtx};
+    cvar.wait(lock, [&] { return service.stopped.load(); });
+  }
 }
 
 TEST_F(AsyncContextTest, TestUser1Signal)

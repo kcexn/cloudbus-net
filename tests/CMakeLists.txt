@@ -4,6 +4,7 @@ set(
   TEST_NAMES
     test_async_context
     test_async_tcp_service
+    test_async_udp_service
     test_mock_socketpair
     test_mock_setsockopt
     test_mock_bind
