@@ -120,7 +120,7 @@ public:
    * @brief Read data from a connected socket.
    * @param ctx The async context to start the reader on.
    * @param socket the socket to read data from.
-   * @param rmsg A shared pointer to a mutable read buffer.
+   * @param rctx A shared pointer to a mutable read buffer.
    */
   auto reader(async_context &ctx, const socket_dialog &socket,
               std::shared_ptr<read_context> rctx) -> void;
