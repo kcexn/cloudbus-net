@@ -1,8 +1,8 @@
-# Doxyfile for Cloudbus Segment
+# Doxyfile for CPPNET
 
-PROJECT_NAME           = "Cloudbus Segment"
+PROJECT_NAME           = "cppnet"
 PROJECT_NUMBER         =
-PROJECT_BRIEF          = "Segment Component for cloudbus"
+PROJECT_BRIEF          = "C++ network utilities for asynchronous servers."
 PROJECT_LOGO           =
 
 OUTPUT_DIRECTORY       = docs

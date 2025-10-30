@@ -24,16 +24,16 @@
 
 #include <system_error>
 namespace net::service {
-template <typename TCPStreamHandler>
+template <typename TCPStreamHandler, std::size_t Size>
 template <typename T>
-async_tcp_service<TCPStreamHandler>::async_tcp_service(
+async_tcp_service<TCPStreamHandler, Size>::async_tcp_service(
     socket_address<T> address) noexcept
     : address_{address}
 {}
 
-template <typename TCPStreamHandler>
-auto async_tcp_service<TCPStreamHandler>::signal_handler(int signum) noexcept
-    -> void
+template <typename TCPStreamHandler, std::size_t Size>
+auto async_tcp_service<TCPStreamHandler, Size>::signal_handler(
+    int signum) noexcept -> void
 {
   if (signum == terminate)
   {
@@ -48,9 +48,9 @@ auto async_tcp_service<TCPStreamHandler>::signal_handler(int signum) noexcept
   }
 }
 
-template <typename TCPStreamHandler>
-auto async_tcp_service<TCPStreamHandler>::start(async_context &ctx) noexcept
-    -> void
+template <typename TCPStreamHandler, std::size_t Size>
+auto async_tcp_service<TCPStreamHandler, Size>::start(
+    async_context &ctx) noexcept -> void
 {
   using namespace io;
   using namespace io::socket;
@@ -67,8 +67,8 @@ auto async_tcp_service<TCPStreamHandler>::start(async_context &ctx) noexcept
   acceptor(ctx, ctx.poller.emplace(std::move(sock)));
 }
 
-template <typename TCPStreamHandler>
-auto async_tcp_service<TCPStreamHandler>::acceptor(
+template <typename TCPStreamHandler, std::size_t Size>
+auto async_tcp_service<TCPStreamHandler, Size>::acceptor(
     async_context &ctx, const socket_dialog &socket) -> void
 {
   using namespace stdexec;
@@ -83,8 +83,8 @@ auto async_tcp_service<TCPStreamHandler>::acceptor(
   ctx.scope.spawn(std::move(accept));
 }
 
-template <typename TCPStreamHandler>
-auto async_tcp_service<TCPStreamHandler>::reader(
+template <typename TCPStreamHandler, std::size_t Size>
+auto async_tcp_service<TCPStreamHandler, Size>::reader(
     async_context &ctx, const socket_dialog &socket,
     std::shared_ptr<read_context> rctx) -> void
 {
@@ -108,8 +108,8 @@ auto async_tcp_service<TCPStreamHandler>::reader(
   ctx.scope.spawn(std::move(recvmsg));
 }
 
-template <typename TCPStreamHandler>
-auto async_tcp_service<TCPStreamHandler>::emit(
+template <typename TCPStreamHandler, std::size_t Size>
+auto async_tcp_service<TCPStreamHandler, Size>::emit(
     async_context &ctx, const socket_dialog &socket,
     std::shared_ptr<read_context> rctx, std::span<const std::byte> buf) -> void
 {
@@ -117,8 +117,8 @@ auto async_tcp_service<TCPStreamHandler>::emit(
   handle(ctx, socket, std::move(rctx), buf);
 }
 
-template <typename TCPStreamHandler>
-auto async_tcp_service<TCPStreamHandler>::initialize_(
+template <typename TCPStreamHandler, std::size_t Size>
+auto async_tcp_service<TCPStreamHandler, Size>::initialize_(
     const socket_handle &socket) -> std::error_code
 {
   using namespace io;
@@ -151,8 +151,8 @@ auto async_tcp_service<TCPStreamHandler>::initialize_(
   return {};
 }
 
-template <typename TCPStreamHandler>
-auto async_tcp_service<TCPStreamHandler>::stop_() -> void
+template <typename TCPStreamHandler, std::size_t Size>
+auto async_tcp_service<TCPStreamHandler, Size>::stop_() -> void
 {
   using namespace io::socket;
 

@@ -26,6 +26,7 @@ namespace net::service {
  * @brief A ServiceLike Async UDP Service.
  * @tparam StreamHandler The StreamHandler type that derives from
  * async_udp_service.
+ * @tparam Size The socket read buffer size. (Default 64KiB).
  * @note The default constructor of async_udp_service is protected
  * so async_udp_service can't be constructed without a stream handler
  * (which would be UB).
@@ -62,7 +63,9 @@ namespace net::service {
  * };
  * @endcode
  */
-template <typename UDPStreamHandler> class async_udp_service {
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+template <typename UDPStreamHandler, std::size_t Size = 64 * 1024UL>
+class async_udp_service {
 public:
   /** @brief Templated socket address type. */
   template <typename T> using socket_address = io::socket::socket_address<T>;
@@ -81,14 +84,8 @@ public:
 
   /** @brief A read context. */
   struct read_context {
-    /**
-     * @brief The read buffer size.
-     * @details The buffer size is set to the maximum
-     * UDP datagram size of 64KiB.
-     */
-    static constexpr std::size_t BUFSIZE = 64 * 1024UL;
     /** @brief The read buffer type. */
-    using buffer_type = std::array<std::byte, BUFSIZE>;
+    using buffer_type = std::array<std::byte, Size>;
     /**
      * @brief Socket address type.
      * @details sockaddr_in6 is a large enough type to store both

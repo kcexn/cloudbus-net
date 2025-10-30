@@ -23,24 +23,24 @@
 #include "net/service/async_udp_service.hpp"
 namespace net::service {
 
-template <typename UDPStreamHandler>
+template <typename UDPStreamHandler, std::size_t Size>
 template <typename T>
-async_udp_service<UDPStreamHandler>::async_udp_service(
+async_udp_service<UDPStreamHandler, Size>::async_udp_service(
     socket_address<T> address) noexcept
     : address_{address}
 {}
 
-template <typename UDPStreamHandler>
-auto async_udp_service<UDPStreamHandler>::signal_handler(int signum) noexcept
-    -> void
+template <typename UDPStreamHandler, std::size_t Size>
+auto async_udp_service<UDPStreamHandler, Size>::signal_handler(
+    int signum) noexcept -> void
 {
   if (signum == terminate)
     stop_();
 }
 
-template <typename UDPStreamHandler>
-auto async_udp_service<UDPStreamHandler>::start(async_context &ctx) noexcept
-    -> void
+template <typename UDPStreamHandler, std::size_t Size>
+auto async_udp_service<UDPStreamHandler, Size>::start(
+    async_context &ctx) noexcept -> void
 {
   using namespace io;
   using namespace io::socket;
@@ -58,8 +58,8 @@ auto async_udp_service<UDPStreamHandler>::start(async_context &ctx) noexcept
          std::make_shared<read_context>());
 }
 
-template <typename UDPStreamHandler>
-auto async_udp_service<UDPStreamHandler>::reader(
+template <typename UDPStreamHandler, std::size_t Size>
+auto async_udp_service<UDPStreamHandler, Size>::reader(
     async_context &ctx, const socket_dialog &socket,
     std::shared_ptr<read_context> rctx) -> void
 {
@@ -79,8 +79,8 @@ auto async_udp_service<UDPStreamHandler>::reader(
   ctx.scope.spawn(std::move(recvmsg));
 }
 
-template <typename UDPStreamHandler>
-auto async_udp_service<UDPStreamHandler>::emit(
+template <typename UDPStreamHandler, std::size_t Size>
+auto async_udp_service<UDPStreamHandler, Size>::emit(
     async_context &ctx, const socket_dialog &socket,
     std::shared_ptr<read_context> rctx, std::span<const std::byte> buf) -> void
 {
@@ -88,8 +88,8 @@ auto async_udp_service<UDPStreamHandler>::emit(
   handle(ctx, socket, std::move(rctx), buf);
 }
 
-template <typename UDPStreamHandler>
-[[nodiscard]] auto async_udp_service<UDPStreamHandler>::initialize_(
+template <typename UDPStreamHandler, std::size_t Size>
+[[nodiscard]] auto async_udp_service<UDPStreamHandler, Size>::initialize_(
     const socket_handle &socket) -> std::error_code
 {
   using namespace io;
@@ -119,8 +119,8 @@ template <typename UDPStreamHandler>
   return {};
 }
 
-template <typename UDPStreamHandler>
-auto async_udp_service<UDPStreamHandler>::stop_() -> void
+template <typename UDPStreamHandler, std::size_t Size>
+auto async_udp_service<UDPStreamHandler, Size>::stop_() -> void
 {
   using namespace io::socket;
 

@@ -26,6 +26,7 @@ namespace net::service {
  * @brief A ServiceLike Async TCP Service.
  * @tparam StreamHandler The StreamHandler type that derives from
  * async_tcp_service.
+ * @tparam Size The socket read buffer size. (Default 64KiB).
  * @note The default constructor of async_tcp_service is protected
  * so async_tcp_service can't be constructed without a stream handler
  * (which would be UB).
@@ -69,7 +70,9 @@ namespace net::service {
  * };
  * @endcode
  */
-template <typename TCPStreamHandler> class async_tcp_service {
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+template <typename TCPStreamHandler, std::size_t Size = 64 * 1024UL>
+class async_tcp_service {
 public:
   /** @brief Templated socket address type. */
   template <typename T> using socket_address = io::socket::socket_address<T>;
@@ -88,15 +91,8 @@ public:
 
   /** @brief A read context. */
   struct read_context {
-    /**
-     * @brief The read buffer size.
-     * @details 64KiB was chosen for consistency as it is
-     * the maximum size of an atomic read for protocols
-     * like UDP and SCTP.
-     */
-    static constexpr std::size_t BUFSIZE = 64 * 1024UL;
     /** @brief The read buffer type. */
-    using buffer_type = std::array<std::byte, BUFSIZE>;
+    using buffer_type = std::array<std::byte, Size>;
     /** @brief The socket message type. */
     using socket_message = io::socket::socket_message<>;
 

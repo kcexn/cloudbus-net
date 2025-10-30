@@ -20,6 +20,8 @@
 #pragma once
 #ifndef CPPNET_HPP
 #define CPPNET_HPP
+/** @brief This is the root namespace of cppnet. */
+namespace net {}                         // namespace net
 #include "service/async_tcp_service.hpp" // IWYU pragma: export
 #include "service/async_udp_service.hpp" // IWYU pragma: export
 #include "service/context_thread.hpp"    // IWYU pragma: export
