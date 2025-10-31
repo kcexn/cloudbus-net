@@ -97,7 +97,9 @@ public:
     using socket_message = io::socket::socket_message<>;
 
     /** @brief The read buffer. */
-    buffer_type buffer{};
+    buffer_type read_buffer{};
+    /** @brief An assignable read buffer span. */
+    std::span<std::byte> buffer{read_buffer};
     /** @brief The read socket message. */
     socket_message msg{.buffers = buffer};
   };

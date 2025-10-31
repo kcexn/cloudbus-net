@@ -100,7 +100,9 @@ public:
     using socket_message = io::socket::socket_message<sockaddr_in6>;
 
     /** @brief The read buffer. */
-    buffer_type buffer{};
+    buffer_type read_buffer{};
+    /** @brief An assignable read buffer span. */
+    std::span<std::byte> buffer{read_buffer};
     /** @brief The read socket message. */
     socket_message msg{.address = socket_address{}, .buffers = buffer};
   };

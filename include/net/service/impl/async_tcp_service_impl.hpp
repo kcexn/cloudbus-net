@@ -96,11 +96,11 @@ auto async_tcp_service<TCPStreamHandler, Size>::reader(
   sender auto recvmsg =
       io::recvmsg(socket, rctx->msg, 0) |
       then([&, socket, rctx](auto &&len) mutable {
-        using size_type = std::size_t;
         if (!len)
           return emit(ctx, socket);
 
-        auto buf = std::span{rctx->buffer.data(), static_cast<size_type>(len)};
+        auto buf =
+            std::span{rctx->buffer.data(), static_cast<std::size_t>(len)};
         emit(ctx, socket, std::move(rctx), buf);
       }) |
       upon_error([&, socket](auto &&error) { emit(ctx, socket); });
