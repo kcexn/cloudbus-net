@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 project(
   CppNet
-  VERSION 0.5.0
+  VERSION 0.6.0
   LANGUAGES CXX)
 
 # net requires at least C++20
@@ -23,7 +23,7 @@ CPMAddPackage(
 
 # Add AsyncBerkeley as a dependency.
 CPMAddPackage(
-  URI "gh:kcexn/async-berkeley@0.3.1"
+  URI "gh:kcexn/async-berkeley@0.3.2"
   OPTIONS
     "IO_BUILD_TESTING OFF"
     "IO_BUILD_EXAMPLES OFF"

@@ -205,9 +205,9 @@ TEST_F(AsyncUdpServiceV4Test, AsyncServiceTest)
   service.start(mtx, cvar, addr);
   {
     auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
+    cvar.wait(lock, [&] { return service.state != service.PENDING; });
   }
-  ASSERT_FALSE(service.stopped.load());
+  ASSERT_EQ(service.state, service.STARTED);
   {
     using namespace io;
     auto sock = socket_handle(AF_INET, SOCK_DGRAM, 0);
@@ -362,9 +362,9 @@ TEST_F(AsyncUdpServiceV6Test, AsyncServiceTest)
   service.start(mtx, cvar, addr);
   {
     auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
+    cvar.wait(lock, [&] { return service.state != service.PENDING; });
   }
-  ASSERT_FALSE(service.stopped.load());
+  ASSERT_EQ(service.state, service.STARTED);
   {
     using namespace io;
     auto sock = socket_handle(AF_INET6, SOCK_DGRAM, 0);

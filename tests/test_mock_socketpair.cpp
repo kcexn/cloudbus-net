@@ -20,7 +20,6 @@
 #include <gtest/gtest.h>
 
 #include <condition_variable>
-#include <list>
 #include <mutex>
 
 using namespace net::service;
@@ -53,18 +52,15 @@ struct test_service {
 
 TEST_F(AsyncServiceTest, StartTest)
 {
-  auto list = std::list<context_thread<test_service>>{};
-  auto &service = list.emplace_back();
-  ASSERT_FALSE(static_cast<bool>(service.interrupt));
-
+  auto service = context_thread<test_service>();
   std::mutex mtx;
   std::condition_variable cvar;
 
   service.start(mtx, cvar);
   {
     auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
+    cvar.wait(lock, [&] { return service.state != service.PENDING; });
   }
-  EXPECT_TRUE(service.stopped);
+  ASSERT_EQ(service.state, service.STOPPED);
 }
 // NOLINTEND

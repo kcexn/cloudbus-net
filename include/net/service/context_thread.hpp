@@ -55,8 +55,6 @@ struct async_context : detail::immovable {
     /** @brief Assigns a function to the underlying interrupt. */
     inline auto
     operator=(std::function<void()> func) noexcept -> interrupt_type &;
-    /** @brief Tests to see if the interrupt has been assigned to. */
-    inline explicit operator bool() const noexcept;
 
   private:
     /** @brief The underlying interrupt function. */
@@ -67,13 +65,15 @@ struct async_context : detail::immovable {
 
   /** @brief An enum of all valid async context signals. */
   enum signals : std::uint8_t { terminate = 0, user1, END };
+  /** @brief An enum of valid context states. */
+  enum context_states : std::uint8_t { PENDING = 0, STARTED, STOPPED };
 
   /** @brief The asynchronous scope. */
   async_scope scope;
   /** @brief The poll triggers. */
   triggers poller;
-  /** @brief A flag that determines whether the context has stopped. */
-  std::atomic<bool> stopped;
+  /** @brief A counter that tracks the context state. */
+  std::atomic<context_states> state{PENDING};
   /** @brief The active signal mask. */
   std::atomic<signal_mask> sigmask;
   /** @brief The event loop interrupt. */

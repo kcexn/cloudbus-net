@@ -60,7 +60,7 @@ auto context_thread<Service>::stop(socket_type socket) noexcept -> void
   interrupt = std::function<void()>{};
   if (socket != io::socket::INVALID_SOCKET)
     io::socket::close(socket);
-  stopped = true;
+  state = STOPPED;
 }
 
 template <ServiceLike Service>
@@ -99,6 +99,8 @@ auto context_thread<Service>::start(std::mutex &mtx,
         }
         return !(sigmask_ & (1 << terminate));
       });
+
+      state = STARTED;
       cvar.notify_all();
 
       service.start(static_cast<async_context &>(*this));

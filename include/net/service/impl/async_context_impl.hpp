@@ -31,15 +31,15 @@ inline auto async_context::signal(int signum) -> void
 {
   assert(signum >= 0 && signum < END && "signum must be a valid signal.");
   sigmask.fetch_or(1 << signum);
-  if (interrupt)
-    interrupt();
+  interrupt();
 }
 
 inline auto async_context::interrupt_type::operator()() const -> void
 {
   using namespace detail;
   auto func = with_lock(std::unique_lock{mtx_}, [&] { return fn_; });
-  func();
+  if (func)
+    func();
 }
 
 inline auto async_context::interrupt_type::operator=(
@@ -48,12 +48,6 @@ inline auto async_context::interrupt_type::operator=(
   std::lock_guard lock{mtx_};
   fn_ = std::move(func);
   return *this;
-}
-
-inline async_context::interrupt_type::operator bool() const noexcept
-{
-  std::lock_guard lock{mtx_};
-  return static_cast<bool>(fn_);
 }
 } // namespace net::service
 #endif // CPPNET_ASYNC_CONTEXT_IMPL_HPP

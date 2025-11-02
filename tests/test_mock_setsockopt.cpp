@@ -126,8 +126,9 @@ TEST_F(AsyncTcpServiceTest, ServiceNoHang)
   service.start(mtx, cvar, addr);
   {
     auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.stopped.load(); });
+    cvar.wait(lock, [&] { return service.state != service.PENDING; });
   }
+  ASSERT_EQ(service.state, service.STARTED);
 }
 
 class AsyncUdpServiceTest : public ::testing::Test {};

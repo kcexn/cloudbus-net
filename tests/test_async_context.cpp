@@ -70,15 +70,15 @@ TEST_F(AsyncContextTest, AsyncServiceTest)
   service.start(mtx, cvar);
   {
     auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
+    cvar.wait(lock, [&] { return service.state != service.PENDING; });
   }
-  ASSERT_FALSE(service.stopped.load());
+  ASSERT_EQ(service.state, service.STARTED);
   service.signal(service.terminate);
   {
     auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.stopped.load(); });
+    cvar.wait(lock, [&] { return service.state != service.STARTED; });
   }
-  EXPECT_TRUE(service.stopped);
+  ASSERT_EQ(service.state, service.STOPPED);
 }
 
 TEST_F(AsyncContextTest, StartTwiceTest)
@@ -92,14 +92,15 @@ TEST_F(AsyncContextTest, StartTwiceTest)
   EXPECT_THROW(service.start(mtx, cvar), std::invalid_argument);
   {
     auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.interrupt || service.stopped; });
+    cvar.wait(lock, [&] { return service.state != service.PENDING; });
   }
-  ASSERT_FALSE(service.stopped.load());
+  ASSERT_EQ(service.state, service.STARTED);
   service.signal(service.terminate);
   {
     auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.stopped.load(); });
+    cvar.wait(lock, [&] { return service.state != service.STARTED; });
   }
+  ASSERT_EQ(service.state, service.STOPPED);
 }
 
 TEST_F(AsyncContextTest, TestUser1Signal)
@@ -113,9 +114,9 @@ TEST_F(AsyncContextTest, TestUser1Signal)
   service.start(mtx, cvar);
   {
     auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return static_cast<bool>(service.interrupt); });
+    cvar.wait(lock, [&] { return service.state != service.PENDING; });
   }
-  ASSERT_TRUE(static_cast<bool>(service.interrupt));
+  ASSERT_EQ(service.state, service.STARTED);
   service.signal(service.user1);
   {
     auto lock = std::unique_lock{test_mtx};
