@@ -31,8 +31,7 @@ int accept(int __fd, struct sockaddr *addr, socklen_t *len)
   return -1;
 }
 
-class AsyncTcpServiceTest : public ::testing::Test {};
-
+static std::atomic<bool> stopped = false;
 struct echo_block_service : public async_tcp_service<echo_block_service> {
   using Base = async_tcp_service<echo_block_service>;
   using socket_message = io::socket::socket_message<>;
@@ -41,10 +40,20 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
   explicit echo_block_service(socket_address<T> address) : Base(address)
   {}
 
-  auto initialize(const socket_handle &sock) -> std::error_code { return {}; }
+  bool initialized = false;
+  auto initialize(const socket_handle &sock) -> std::error_code
+  {
+    if (initialized)
+      return std::make_error_code(std::errc::invalid_argument);
+
+    initialized = true;
+    return {};
+  }
+
+  auto stop() noexcept -> void { stopped = !stopped; }
 
   auto echo(async_context &ctx, const socket_dialog &socket,
-            const std::shared_ptr<read_context> &rmsg,
+            const std::shared_ptr<read_context> &rctx,
             socket_message msg) -> void
   {
     using namespace io::socket;
@@ -52,50 +61,151 @@ struct echo_block_service : public async_tcp_service<echo_block_service> {
 
     sender auto sendmsg =
         io::sendmsg(socket, msg, 0) |
-        then([&, socket, msg, rmsg](auto &&len) mutable {
-          if (auto buffers = std::move(msg.buffers); buffers += len)
-            return echo(ctx, socket, rmsg, {.buffers = buffers});
-
-          reader(ctx, socket, std::move(rmsg));
-        }) |
+        then([&, socket, rctx](auto &&len) { reader(ctx, socket, rctx); }) |
         upon_error([](auto &&error) {});
 
     ctx.scope.spawn(std::move(sendmsg));
   }
 
   auto operator()(async_context &ctx, const socket_dialog &socket,
-                  std::shared_ptr<read_context> rmsg,
+                  std::shared_ptr<read_context> rctx,
                   std::span<const std::byte> buf) -> void
   {
-    if (buf.data())
-      echo(ctx, socket, rmsg, {.buffers = buf});
+    echo(ctx, socket, rctx, {.buffers = buf});
+  }
+};
+
+class AsyncTcpServiceTest : public ::testing::Test {
+protected:
+  auto SetUp() -> void override
+  {
+    using namespace stdexec;
+
+    ctx = std::make_unique<async_context>();
+
+    addr_v4 = socket_address<sockaddr_in>();
+    addr_v4->sin_family = AF_INET;
+    addr_v4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr_v4->sin_port = htons(port++);
+    service_v4 = std::make_unique<echo_block_service>(addr_v4);
+    server_v4 = std::make_unique<server_type>();
+
+    addr_v6 = socket_address<sockaddr_in6>();
+    addr_v6->sin6_family = AF_INET6;
+    addr_v6->sin6_addr = in6addr_loopback;
+    addr_v6->sin6_port = htons(port++);
+    service_v6 = std::make_unique<echo_block_service>(addr_v6);
+    server_v6 = std::make_unique<server_type>();
+
+    int err =
+        ::socketpair(AF_UNIX, SOCK_STREAM, 0, ctx->interrupt.sockets.data());
+    ASSERT_EQ(err, 0);
+
+    isr(ctx->poller.emplace(ctx->interrupt.sockets[0]), [&] {
+      auto sigmask = ctx->sigmask.exchange(0);
+      for (int signum = 0; auto mask = (sigmask >> signum); ++signum)
+      {
+        if (mask & (1 << 0))
+        {
+          service_v4->signal_handler(signum);
+          service_v6->signal_handler(signum);
+        }
+      }
+      return !(sigmask & (1 << ctx->terminate));
+    });
+
+    is_empty = false;
+    auto mark = std::atomic(false);
+    wait_empty = std::jthread([&] {
+      mark = true;
+      cvar.notify_all();
+      sync_wait(ctx->scope.on_empty() | then([&] { is_empty = true; }));
+    });
+    {
+      auto lock = std::unique_lock(mtx);
+      cvar.wait(lock, [&] { return mark.load(); });
+    }
+  }
+
+  template <typename T> using socket_address = io::socket::socket_address<T>;
+  using socket_dialog =
+      io::socket::socket_dialog<io::execution::poll_multiplexer>;
+
+  template <typename Fn>
+    requires std::is_invocable_r_v<bool, Fn>
+  auto isr(const socket_dialog &socket, Fn &&handler) -> void
+  {
+    using namespace stdexec;
+    using namespace io::socket;
+    static auto buf = std::array<std::byte, 1024>();
+    static auto msg = socket_message{.buffers = buf};
+
+    if (!handler())
+    {
+      ctx->scope.request_stop();
+      return;
+    }
+
+    sender auto recvmsg =
+        io::recvmsg(socket, msg, 0) |
+        then([this, socket, handler](auto len) { isr(socket, handler); }) |
+        upon_error([](auto &&error) {
+          if constexpr (std::is_same_v<std::decay_t<decltype(error)>, int>)
+          {
+            auto msg = std::error_code(error, std::system_category()).message();
+          }
+        });
+
+    ctx->scope.spawn(std::move(recvmsg));
+  }
+
+  using server_type = context_thread<echo_block_service>;
+
+  unsigned short port = 5300;
+
+  std::unique_ptr<async_context> ctx;
+  std::atomic<bool> is_empty;
+  std::jthread wait_empty;
+  std::unique_ptr<echo_block_service> service_v4;
+  std::unique_ptr<echo_block_service> service_v6;
+  std::unique_ptr<server_type> server_v4;
+  std::unique_ptr<server_type> server_v6;
+
+  socket_address<sockaddr_in> addr_v4;
+  socket_address<sockaddr_in6> addr_v6;
+  std::mutex mtx;
+  std::condition_variable cvar;
+
+  auto TearDown() -> void override
+  {
+    if (ctx->interrupt.sockets[1] != io::socket::INVALID_SOCKET)
+      io::socket::close(ctx->interrupt.sockets[1]);
+    if (!is_empty)
+    {
+      ctx->signal(ctx->terminate);
+      ctx->poller.wait();
+    }
+    service_v4.reset();
+    service_v6.reset();
+    ctx.reset();
+    server_v4.reset();
+    server_v6.reset();
   }
 };
 
 TEST_F(AsyncTcpServiceTest, AcceptError)
 {
   using namespace io::socket;
-
-  auto ctx = async_context();
-  auto addr = socket_address<sockaddr_in>();
-  addr->sin_family = AF_INET;
-  addr->sin_port = htons(8080);
-  auto service = echo_block_service(addr);
-
-  ctx.interrupt = [&] {
-    auto sigmask = ctx.sigmask.exchange(0);
-    for (int signum = 0; auto mask = (sigmask >> signum); ++signum)
-    {
-      if (mask & (1 << 0))
-        service.signal_handler(signum);
-    }
-  };
-
-  service.start(ctx);
-  ASSERT_FALSE(ctx.scope.get_stop_token().stop_requested());
+  service_v4->start(*ctx);
+  service_v6->start(*ctx);
   ASSERT_EQ(error, static_cast<int>(std::errc::bad_file_descriptor));
 
-  ctx.signal(ctx.terminate);
-  while (ctx.poller.wait());
+  ctx->signal(ctx->terminate);
+  auto n = 0UL;
+  while (ctx->poller.wait_for(50))
+  {
+    ASSERT_LE(n++, 3);
+  }
+  EXPECT_GT(n, 0);
 }
 // NOLINTEND

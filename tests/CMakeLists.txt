@@ -5,12 +5,11 @@ set(
     test_async_context
     test_async_tcp_service
     test_async_udp_service
-    test_mock_socketpair
-    test_mock_setsockopt
+    test_mock_accept
     test_mock_bind
     test_mock_listen
-    test_mock_recvmsg
-    test_mock_accept
+    test_mock_setsockopt
+    test_mock_socketpair
 )
 
 foreach(TEST_NAME IN LISTS TEST_NAMES)

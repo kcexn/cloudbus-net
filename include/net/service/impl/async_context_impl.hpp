@@ -16,15 +16,12 @@
 
 /**
  * @file async_context_impl.hpp
- * @brief This file defines the asynchronous service.
+ * @brief This file defines the asynchronous context.
  */
 #pragma once
 #ifndef CPPNET_ASYNC_CONTEXT_IMPL_HPP
 #define CPPNET_ASYNC_CONTEXT_IMPL_HPP
-#include "net/detail/with_lock.hpp"
 #include "net/service/context_thread.hpp"
-
-#include <stdexec/execution.hpp>
 namespace net::service {
 
 inline auto async_context::signal(int signum) -> void
@@ -34,20 +31,5 @@ inline auto async_context::signal(int signum) -> void
   interrupt();
 }
 
-inline auto async_context::interrupt_type::operator()() const -> void
-{
-  using namespace detail;
-  auto func = with_lock(std::unique_lock{mtx_}, [&] { return fn_; });
-  if (func)
-    func();
-}
-
-inline auto async_context::interrupt_type::operator=(
-    std::function<void()> func) noexcept -> interrupt_type &
-{
-  std::lock_guard lock{mtx_};
-  fn_ = std::move(func);
-  return *this;
-}
 } // namespace net::service
 #endif // CPPNET_ASYNC_CONTEXT_IMPL_HPP

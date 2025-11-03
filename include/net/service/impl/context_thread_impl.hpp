@@ -55,10 +55,11 @@ auto context_thread<Service>::isr(async_scope &scope,
 }
 
 template <ServiceLike Service>
-auto context_thread<Service>::stop(socket_type socket) noexcept -> void
+auto context_thread<Service>::stop() noexcept -> void
 {
-  interrupt = std::function<void()>{};
-  if (socket != io::socket::INVALID_SOCKET)
+  auto socket = interrupt.sockets[1];
+  interrupt.sockets[1] = interrupt.INVALID_SOCKET;
+  if (socket != interrupt.INVALID_SOCKET)
     io::socket::close(socket);
   state = STOPPED;
 }
@@ -78,19 +79,10 @@ auto context_thread<Service>::start(std::mutex &mtx,
     using namespace io::socket;
 
     auto service = Service{std::forward<Args>(args)...};
-    auto isockets = std::array<socket_type, 2>{INVALID_SOCKET, INVALID_SOCKET};
-    if (!socketpair(AF_UNIX, SOCK_STREAM, 0, isockets.data()))
+    auto &sockets = interrupt.sockets;
+    if (!socketpair(AF_UNIX, SOCK_STREAM, 0, sockets.data()))
     {
-      with_lock(std::unique_lock{mtx}, [&]() noexcept {
-        interrupt = [&, socket = isockets[1]]() noexcept {
-          using io::sendmsg;
-
-          static constexpr auto message = std::array<char, 1>{};
-          sendmsg(socket, socket_message{.buffers = message}, 0);
-        };
-      });
-
-      isr(scope, poller.emplace(isockets[0]), [&]() noexcept {
+      isr(scope, poller.emplace(sockets[0]), [&]() noexcept {
         auto sigmask_ = sigmask.exchange(0);
         for (int signum = 0; auto mask = (sigmask_ >> signum); ++signum)
         {
@@ -112,7 +104,7 @@ auto context_thread<Service>::start(std::mutex &mtx,
       run(service, token);
     }
 
-    with_lock(std::unique_lock{mtx}, [&]() noexcept { stop(isockets[1]); });
+    with_lock(std::unique_lock{mtx}, [&]() noexcept { stop(); });
     cvar.notify_all();
   });
 
@@ -121,6 +113,9 @@ auto context_thread<Service>::start(std::mutex &mtx,
 
 template <ServiceLike Service> context_thread<Service>::~context_thread()
 {
+  if (!started_)
+    return;
+
   signal(terminate);
   server_.join();
 }

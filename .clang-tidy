@@ -9,7 +9,8 @@ Checks: >
   readability-*,
   -readability-braces-around-statements,
   -readability-magic-numbers,
-  -readability-implicit-bool-conversion
+  -readability-implicit-bool-conversion,
+  -readability-static-accessed-through-instance
 HeaderFilterRegex: '^include/.*'
 CheckOptions:
   misc-trailing-whitespace.AllowEmptyLines: false

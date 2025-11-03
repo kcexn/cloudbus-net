@@ -22,6 +22,7 @@
 #define CPPNET_CONTEXT_THREAD_HPP
 #include "net/detail/concepts.hpp"
 #include "net/detail/immovable.hpp"
+#include "net/timers/interrupt.hpp"
 
 #include <exec/async_scope.hpp>
 #include <io/io.hpp>
@@ -29,7 +30,6 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
-#include <functional>
 #include <mutex>
 #include <thread>
 #include <type_traits>
@@ -46,22 +46,10 @@ struct async_context : detail::immovable {
   using triggers = io::execution::basic_triggers<multiplexer_type>;
   /** @brief The signal mask type. */
   using signal_mask = std::uint64_t;
-
-  /** @brief The event-loop interrupt */
-  class interrupt_type {
-  public:
-    /** @brief Calls the underlying interrupt. */
-    inline auto operator()() const -> void;
-    /** @brief Assigns a function to the underlying interrupt. */
-    inline auto
-    operator=(std::function<void()> func) noexcept -> interrupt_type &;
-
-  private:
-    /** @brief The underlying interrupt function. */
-    std::function<void()> fn_;
-    /** @brief A mutex for syncrhonization. */
-    mutable std::mutex mtx_;
-  };
+  /** @brief Interrupt source type. */
+  using interrupt_source = timers::socketpair_interrupt_source_t;
+  /** @brief The interrupt type. */
+  using interrupt_type = timers::interrupt<interrupt_source>;
 
   /** @brief An enum of all valid async context signals. */
   enum signals : std::uint8_t { terminate = 0, user1, END };
@@ -124,11 +112,8 @@ template <ServiceLike Service> class context_thread : public async_context {
   static auto isr(async_scope &scope, const socket_dialog &socket,
                   Fn handle) -> void;
 
-  /**
-   * @brief Called when the async_service is stopped.
-   * @param socket An interrupt socket that needs to be closed.
-   */
-  auto stop(socket_type socket) noexcept -> void;
+  /** @brief Called when the async_service is stopped. */
+  auto stop() noexcept -> void;
 
 public:
   /** @brief Default constructor. */

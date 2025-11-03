@@ -25,20 +25,21 @@
 
 using namespace net::service;
 
-class AsyncContextTest : public ::testing::Test {
-protected:
-  void SetUp() override {}
-  void TearDown() override {}
-};
+class AsyncContextTest : public ::testing::Test {};
 
 TEST_F(AsyncContextTest, SignalTest)
 {
-  int handled = 0;
-  async_context ctx{};
+  auto ctx = async_context{};
 
-  ctx.interrupt = [&] { handled++; };
+  int err = ::socketpair(AF_UNIX, SOCK_STREAM, 0, ctx.interrupt.sockets.data());
+  ASSERT_EQ(err, 0);
+
   ctx.signal(ctx.terminate);
-  ASSERT_EQ(handled, 1);
+
+  auto buf = std::array<char, 5>();
+  auto msg = io::socket::socket_message<sockaddr_in>{.buffers = buf};
+  auto len = io::recvmsg(ctx.interrupt.sockets[0], msg, 0);
+  EXPECT_EQ(len, 1);
 }
 
 std::mutex test_mtx;

@@ -157,7 +157,8 @@ auto async_tcp_service<TCPStreamHandler, Size>::stop_() -> void
   using namespace io::socket;
 
   auto sockfd = acceptor_sockfd_.exchange(INVALID_SOCKET);
-  shutdown(sockfd, SHUT_RD);
+  if (sockfd != INVALID_SOCKET)
+    shutdown(sockfd, SHUT_RD);
 }
 
 } // namespace net::service
