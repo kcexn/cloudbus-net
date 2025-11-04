@@ -31,10 +31,22 @@ struct async_context;
  * @brief The root namespace for all cppnet components.
  */
 namespace net {
+/** @brief ServiceLike describes types that behave like an application or
+ * service. */
 template <typename S>
 concept ServiceLike = requires(S service, service::async_context &ctx) {
   { service.signal_handler(1) } noexcept -> std::same_as<void>;
   { service.start(ctx) } noexcept -> std::same_as<void>;
 };
+
+/** @brief This namespace is for timers and interrupts. */
+namespace timers {
+/** @brief A concept for constraining interrupt sources. */
+template <typename Tag>
+concept InterruptSource = requires(const Tag tag) {
+  { tag.interrupt() } noexcept -> std::same_as<void>;
+};
+} // namespace timers.
+
 } // namespace net
 #endif // CPPNET_CONCEPT_HPP

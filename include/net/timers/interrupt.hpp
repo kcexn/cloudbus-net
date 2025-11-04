@@ -20,15 +20,11 @@
 #pragma once
 #ifndef CPPNET_INTERRUPT_HPP
 #define CPPNET_INTERRUPT_HPP
+#include "net/detail/concepts.hpp"
+
 #include <io/io.hpp>
 /** @brief This namespace is for timers and interrupts. */
 namespace net::timers {
-/** @brief A concept for constraining interrupt sources. */
-template <typename Tag>
-concept InterruptSource = requires(const Tag tag) {
-  { tag.interrupt() } noexcept -> std::same_as<void>;
-};
-
 /** @brief A socketpair interrupt source. */
 struct socketpair_interrupt_source_t {
   /** @brief The native socket type. */
@@ -52,6 +48,8 @@ struct socketpair_interrupt_source_t {
  * @details Interrupts are used to awaken sleeping event-loops.
  */
 template <InterruptSource Interrupt> struct interrupt : public Interrupt {
+  /** @brief The underlying interrupt source type. */
+  using interrupt_source_t = Interrupt;
   /** @brief Calls the underlying interrupt. */
   inline auto operator()() const noexcept -> void;
 };

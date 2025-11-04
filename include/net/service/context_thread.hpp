@@ -22,13 +22,12 @@
 #define CPPNET_CONTEXT_THREAD_HPP
 #include "net/detail/concepts.hpp"
 #include "net/detail/immovable.hpp"
-#include "net/timers/interrupt.hpp"
+#include "net/timers/timers.hpp"
 
 #include <exec/async_scope.hpp>
 #include <io/io.hpp>
 
 #include <atomic>
-#include <condition_variable>
 #include <cstdint>
 #include <mutex>
 #include <thread>
@@ -48,8 +47,8 @@ struct async_context : detail::immovable {
   using signal_mask = std::uint64_t;
   /** @brief Interrupt source type. */
   using interrupt_source = timers::socketpair_interrupt_source_t;
-  /** @brief The interrupt type. */
-  using interrupt_type = timers::interrupt<interrupt_source>;
+  /** @brief The timers type. */
+  using timers_type = timers::timers<interrupt_source>;
 
   /** @brief An enum of all valid async context signals. */
   enum signals : std::uint8_t { terminate = 0, user1, END };
@@ -64,15 +63,18 @@ struct async_context : detail::immovable {
   std::atomic<context_states> state{PENDING};
   /** @brief The active signal mask. */
   std::atomic<signal_mask> sigmask;
-  /** @brief The event loop interrupt. */
-  interrupt_type interrupt;
+  /** @brief The event loop timers. */
+  timers_type timers;
 
   /**
    * @brief Sets the signal mask, then interrupts the service.
    * @param signum The signal to send. Must be in range of
    *               enum signals.
    */
-  auto signal(int signum) -> void;
+  inline auto signal(int signum) -> void;
+
+  /** @brief Calls the timers interrupt. */
+  inline auto interrupt() const noexcept -> void;
 };
 
 /**
@@ -92,10 +94,6 @@ template <ServiceLike Service> class context_thread : public async_context {
   using clock = std::chrono::steady_clock;
   /** @brief The duration type. */
   using duration = std::chrono::milliseconds;
-
-  /** @brief Internal context loop interval.*/
-  static constexpr int INTERVAL_MS = 2000;
-
   /**
    * @brief An interrupt service routine.
    *
@@ -137,9 +135,7 @@ public:
    *             thread.
    * @param args The arguments to forward to the Service constructor.
    */
-  template <typename... Args>
-  auto start(std::mutex &mtx, std::condition_variable &cvar,
-             Args &&...args) -> void;
+  template <typename... Args> auto start(Args &&...args) -> void;
 
   /** @brief The destructor signals the thread before joining it. */
   ~context_thread();

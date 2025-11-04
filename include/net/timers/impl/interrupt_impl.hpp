@@ -30,8 +30,7 @@ inline auto socketpair_interrupt_source_t::interrupt() const noexcept -> void
   static constexpr auto buf = std::array<char, 1>{'x'};
   static const auto msg = socket_message<sockaddr_in>{.buffers = buf};
 
-  if (sockets[1] != INVALID_SOCKET)
-    ::io::sendmsg(sockets[1], msg, 0);
+  ::io::sendmsg(sockets[1], msg, MSG_NOSIGNAL);
 }
 
 template <InterruptSource Interrupt>

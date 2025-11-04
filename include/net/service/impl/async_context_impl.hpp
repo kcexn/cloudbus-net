@@ -31,5 +31,11 @@ inline auto async_context::signal(int signum) -> void
   interrupt();
 }
 
+/** @brief Calls the timers interrupt. */
+inline auto async_context::interrupt() const noexcept -> void
+{
+  static_cast<const timers_type::interrupt_source_t &>(timers).interrupt();
+}
+
 } // namespace net::service
 #endif // CPPNET_ASYNC_CONTEXT_IMPL_HPP

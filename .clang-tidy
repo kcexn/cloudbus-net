@@ -6,6 +6,7 @@ Checks: >
   -cppcoreguidelines-narrowing-conversions,
   modernize-*,
   performance-*,
+  -performance-unnecessary-value-param,
   readability-*,
   -readability-braces-around-statements,
   -readability-magic-numbers,

@@ -52,15 +52,12 @@ struct test_service {
 
 TEST_F(AsyncServiceTest, StartTest)
 {
-  auto service = context_thread<test_service>();
-  std::mutex mtx;
-  std::condition_variable cvar;
+  using enum async_context::context_states;
 
-  service.start(mtx, cvar);
-  {
-    auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.state != service.PENDING; });
-  }
-  ASSERT_EQ(service.state, service.STOPPED);
+  auto service = context_thread<test_service>();
+
+  service.start();
+  service.state.wait(PENDING);
+  ASSERT_EQ(service.state, STOPPED);
 }
 // NOLINTEND

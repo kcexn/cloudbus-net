@@ -21,7 +21,6 @@
 #pragma once
 #ifndef CPPNET_CONTEXT_THREAD_IMPL_HPP
 #define CPPNET_CONTEXT_THREAD_IMPL_HPP
-#include "net/detail/with_lock.hpp"
 #include "net/service/context_thread.hpp"
 
 #include <stdexec/execution.hpp>
@@ -42,10 +41,7 @@ auto context_thread<Service>::isr(async_scope &scope,
   static auto msg = socket_message{.buffers = buffer};
 
   if (!handle())
-  {
-    scope.request_stop();
     return;
-  }
 
   auto recvmsg =
       io::recvmsg(socket, msg, 0) |
@@ -57,31 +53,32 @@ auto context_thread<Service>::isr(async_scope &scope,
 template <ServiceLike Service>
 auto context_thread<Service>::stop() noexcept -> void
 {
-  auto socket = interrupt.sockets[1];
-  interrupt.sockets[1] = interrupt.INVALID_SOCKET;
-  if (socket != interrupt.INVALID_SOCKET)
+  auto socket = timers.sockets[1];
+  timers.sockets[1] = timers.INVALID_SOCKET;
+  if (socket != timers.INVALID_SOCKET)
     io::socket::close(socket);
   state = STOPPED;
 }
 
 template <ServiceLike Service>
 template <typename... Args>
-auto context_thread<Service>::start(std::mutex &mtx,
-                                    std::condition_variable &cvar,
-                                    Args &&...args) -> void
+auto context_thread<Service>::start(Args &&...args) -> void
 {
-  auto lock = std::lock_guard{mtx};
+  auto lock = std::lock_guard{mtx_};
   if (started_)
     throw std::invalid_argument("context_thread can't be started twice.");
 
   server_ = std::thread([&]() noexcept {
     using namespace detail;
     using namespace io::socket;
+    using namespace std::chrono;
 
     auto service = Service{std::forward<Args>(args)...};
-    auto &sockets = interrupt.sockets;
+    auto &sockets = timers.sockets;
     if (!socketpair(AF_UNIX, SOCK_STREAM, 0, sockets.data()))
     {
+      const auto token = scope.get_stop_token();
+
       isr(scope, poller.emplace(sockets[0]), [&]() noexcept {
         auto sigmask_ = sigmask.exchange(0);
         for (int signum = 0; auto mask = (sigmask_ >> signum); ++signum)
@@ -89,23 +86,34 @@ auto context_thread<Service>::start(std::mutex &mtx,
           if (mask & (1 << 0))
             service.signal_handler(signum);
         }
-        return !(sigmask_ & (1 << terminate));
+
+        if (sigmask_ & (1 << terminate))
+        {
+          scope.request_stop();
+          timers.add(
+              seconds(1),
+              [&](timers::timer_id) { service.signal_handler(terminate); },
+              seconds(1));
+        }
+
+        return !token.stop_requested();
       });
 
-      state = STARTED;
-      cvar.notify_all();
-
       service.start(static_cast<async_context &>(*this));
+      state = STARTED;
 
-      const auto token = scope.get_stop_token();
       if (token.stop_requested())
+      {
+        state = STOPPED;
         signal(terminate);
+      }
 
+      state.notify_all();
       run(service, token);
     }
 
-    with_lock(std::unique_lock{mtx}, [&]() noexcept { stop(); });
-    cvar.notify_all();
+    stop();
+    state.notify_all();
   });
 
   started_ = true;
@@ -126,27 +134,21 @@ auto context_thread<Service>::run(Service &service,
                                   const StopToken &token) -> void
 {
   using namespace stdexec;
-  using std::chrono::duration_cast;
+  using namespace std::chrono;
 
-  int next = 0;
-  auto start = clock::now();
-  auto is_empty = false;
-  scope.spawn(poller.on_empty() | then([&]() noexcept { is_empty = true; }));
+  auto next = timers.resolve();
+  int wait_ms =
+      (next.count() < 0) ? next.count() : duration_cast<duration>(next).count();
 
-  while (poller.wait_for(next) || !is_empty)
+  auto is_empty = std::atomic_flag();
+  scope.spawn(poller.on_empty() |
+              then([&]() noexcept { is_empty.test_and_set(); }));
+
+  while (poller.wait_for(wait_ms) || !is_empty.test())
   {
-    const auto now = clock::now();
-
-    next -= duration_cast<duration>(now - start).count();
-    if (next <= 0)
-    {
-      if (token.stop_requested())
-        service.signal_handler(terminate);
-
-      next = INTERVAL_MS;
-    }
-
-    start = now;
+    next = timers.resolve();
+    wait_ms = (next.count() < 0) ? next.count()
+                                 : duration_cast<duration>(next).count();
   }
 }
 } // namespace net::service

@@ -20,7 +20,6 @@
 #include <gtest/gtest.h>
 
 #include <condition_variable>
-#include <list>
 #include <mutex>
 
 using namespace net::service;
@@ -31,14 +30,14 @@ TEST_F(AsyncContextTest, SignalTest)
 {
   auto ctx = async_context{};
 
-  int err = ::socketpair(AF_UNIX, SOCK_STREAM, 0, ctx.interrupt.sockets.data());
+  int err = ::socketpair(AF_UNIX, SOCK_STREAM, 0, ctx.timers.sockets.data());
   ASSERT_EQ(err, 0);
 
   ctx.signal(ctx.terminate);
 
   auto buf = std::array<char, 5>();
   auto msg = io::socket::socket_message<sockaddr_in>{.buffers = buf};
-  auto len = io::recvmsg(ctx.interrupt.sockets[0], msg, 0);
+  auto len = io::recvmsg(ctx.timers.sockets[0], msg, 0);
   EXPECT_EQ(len, 1);
 }
 
@@ -63,61 +62,44 @@ struct test_service {
 
 TEST_F(AsyncContextTest, AsyncServiceTest)
 {
+  using enum async_context::context_states;
+
   auto service = context_thread<test_service>();
+  service.start();
+  service.state.wait(PENDING);
+  ASSERT_EQ(service.state, STARTED);
 
-  std::mutex mtx;
-  std::condition_variable cvar;
-
-  service.start(mtx, cvar);
-  {
-    auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.state != service.PENDING; });
-  }
-  ASSERT_EQ(service.state, service.STARTED);
   service.signal(service.terminate);
-  {
-    auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.state != service.STARTED; });
-  }
-  ASSERT_EQ(service.state, service.STOPPED);
+  service.state.wait(STARTED);
+  ASSERT_EQ(service.state, STOPPED);
 }
 
 TEST_F(AsyncContextTest, StartTwiceTest)
 {
+  using enum async_context::context_states;
+
   auto service = context_thread<test_service>{};
 
-  std::mutex mtx;
-  std::condition_variable cvar;
+  service.start();
+  EXPECT_THROW(service.start(), std::invalid_argument);
+  service.state.wait(PENDING);
+  ASSERT_EQ(service.state, STARTED);
 
-  service.start(mtx, cvar);
-  EXPECT_THROW(service.start(mtx, cvar), std::invalid_argument);
-  {
-    auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.state != service.PENDING; });
-  }
-  ASSERT_EQ(service.state, service.STARTED);
   service.signal(service.terminate);
-  {
-    auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.state != service.STARTED; });
-  }
+  service.state.wait(STARTED);
   ASSERT_EQ(service.state, service.STOPPED);
 }
 
 TEST_F(AsyncContextTest, TestUser1Signal)
 {
-  auto list = std::list<context_thread<test_service>>{};
-  auto &service = list.emplace_back();
+  using enum async_context::context_states;
 
-  std::mutex mtx;
-  std::condition_variable cvar;
+  auto service = context_thread<test_service>();
 
-  service.start(mtx, cvar);
-  {
-    auto lock = std::unique_lock{mtx};
-    cvar.wait(lock, [&] { return service.state != service.PENDING; });
-  }
-  ASSERT_EQ(service.state, service.STARTED);
+  service.start();
+  service.state.wait(PENDING);
+  ASSERT_EQ(service.state, STARTED);
+
   service.signal(service.user1);
   {
     auto lock = std::unique_lock{test_mtx};

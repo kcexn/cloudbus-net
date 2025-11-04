@@ -10,6 +10,7 @@ set(
     test_mock_listen
     test_mock_setsockopt
     test_mock_socketpair
+    test_timers
 )
 
 foreach(TEST_NAME IN LISTS TEST_NAMES)
