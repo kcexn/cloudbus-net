@@ -144,7 +144,8 @@ auto timers<Interrupt>::remove(timer_id tid) noexcept -> void
 {
   // The timer id will be added to the free_ids list once
   // the event propagates out of the eventq.
-  state_.events[tid].armed.clear();
+  if (tid < state_.events.size())
+    state_.events[tid].armed.clear();
 }
 
 /**

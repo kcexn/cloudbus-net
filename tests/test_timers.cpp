@@ -67,6 +67,9 @@ TEST(TimersTests, TimerAdd)
 TEST(TimersTests, ReuseTimerID)
 {
   auto timers = timers_type();
+
+  timers.remove(INVALID_TIMER); // Make sure this doesn't break.
+
   auto timer0 = timers.add(100, [](timer_id) {});
   ASSERT_EQ(timer0, 0);
   timers.remove(timer0);
