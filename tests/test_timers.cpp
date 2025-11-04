@@ -77,4 +77,16 @@ TEST(TimersTests, ReuseTimerID)
   auto timer1 = timers.add(100, [](timer_id) {});
   EXPECT_EQ(timer0, timer1);
 }
+
+TEST(TimersTests, PeriodicTimer)
+{
+  using namespace std::chrono;
+
+  auto timers = timers_type();
+  auto timer0 = timers.add(100, [](timer_id) {}, 100);
+  ASSERT_EQ(timer0, 0);
+  std::this_thread::sleep_for(milliseconds(1));
+  auto next = timers.resolve();
+  EXPECT_NE(next.count(), -1);
+}
 // NOLINTEND

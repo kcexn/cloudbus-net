@@ -251,7 +251,7 @@ auto timers<Interrupt>::resolve() -> duration
     if (event.period.count() == 0)
       event.armed.clear();
 
-    return event.armed.test();
+    return !event.armed.test();
   });
 
   return with_lock(std::unique_lock(mtx_), [&] {
