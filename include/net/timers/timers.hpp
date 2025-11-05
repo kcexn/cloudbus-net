@@ -75,7 +75,7 @@ inline auto operator<=>(const event_ref &lhs,
  * @brief An equality operator to determine event_ref ordering
  * @param lhs The left event_ref.
  * @param rhs The right event_ref.
- * @param returns true if lhs expires at the same time as the rhs, false
+ * @returns true if lhs expires at the same time as the rhs, false
  * otherwise.
  */
 inline auto operator==(const event_ref &lhs, const event_ref &rhs) -> bool;
@@ -159,8 +159,18 @@ public:
   /**
    * @brief Removes the timer with the given id.
    * @param tid The timer_id to remove.
+   * @returns tid if the timer is not valid. Otherwise returns INVALID_TIMER.
+   * @details `remove` is designed to be used in a self-assignment statement.
+   * When the timer has been disarmed, the original timer_id will be cleared
+   * to an INVALID state. This minimizes the risk of calling remove on a timer
+   * twice.
+   * @code
+   * timer_id timer = timers.add(10, [](auto){});
+   * timer = timers.remove(timer); // This sets timer to INVALID_TIMER if
+   * successful.
+   * @endcode
    */
-  auto remove(timer_id tid) noexcept -> void;
+  auto remove(timer_id tid) noexcept -> timer_id;
 
   /**
    * @brief Resolves all expired event handles.

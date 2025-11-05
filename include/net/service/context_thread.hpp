@@ -130,9 +130,6 @@ public:
    * @details This starts the provided service in a separate thread
    * with the provided asynchronous context.
    * @tparam Args Argument types for constructing the Service.
-   * @param mtx A mutex for synchronization with the parent thread.
-   * @param cvar A condition variable for synchronization with the parent
-   *             thread.
    * @param args The arguments to forward to the Service constructor.
    */
   template <typename... Args> auto start(Args &&...args) -> void;

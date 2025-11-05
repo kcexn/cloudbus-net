@@ -70,9 +70,14 @@ TEST(TimersTests, ReuseTimerID)
 
   timers.remove(INVALID_TIMER); // Make sure this doesn't break.
 
+  auto tmp = timers.remove(10);
+  ASSERT_EQ(tmp, 10); // Invalid timers immediately return.
+
   auto timer0 = timers.add(100, [](timer_id) {});
   ASSERT_EQ(timer0, 0);
-  timers.remove(timer0);
+  tmp = timers.remove(timer0);
+  ASSERT_EQ(tmp, INVALID_TIMER);
+
   timers.resolve();
   auto timer1 = timers.add(100, [](timer_id) {});
   EXPECT_EQ(timer0, timer1);

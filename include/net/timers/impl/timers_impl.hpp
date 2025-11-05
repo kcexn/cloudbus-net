@@ -140,12 +140,16 @@ auto timers<Interrupt>::add(std::uint64_t when, handler_t handler,
 
 /** @brief Removes the timer with the given id. */
 template <InterruptSource Interrupt>
-auto timers<Interrupt>::remove(timer_id tid) noexcept -> void
+auto timers<Interrupt>::remove(timer_id tid) noexcept -> timer_id
 {
+  auto lock = std::lock_guard(mtx_);
+  if (tid >= state_.events.size())
+    return tid;
+
   // The timer id will be added to the free_ids list once
   // the event propagates out of the eventq.
-  if (tid < state_.events.size())
-    state_.events[tid].armed.clear();
+  state_.events[tid].armed.clear();
+  return INVALID_TIMER;
 }
 
 /**
