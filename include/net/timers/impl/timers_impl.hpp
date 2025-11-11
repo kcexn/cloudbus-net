@@ -179,6 +179,7 @@ auto dequeue_timers(TimersState &state) -> std::vector<detail::event_ref>
     // If the event is not armed then put the timer on the free_ids list.
     if (!events[next.id].armed.test())
     {
+      events[next.id].handler = nullptr;
       free_ids.push(next.id);
       eventq.pop();
       continue;
@@ -223,6 +224,7 @@ auto update_timers(TimersState &state, Iterator begin, Iterator unarmed,
 
   for (auto it = unarmed; it != end; ++it)
   {
+    events[it->id].handler = nullptr;
     free_ids.push(it->id);
   }
 

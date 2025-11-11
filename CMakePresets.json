@@ -47,7 +47,10 @@
             "name": "debug",
             "description": "tests",
             "displayName": "Debug",
-            "configurePreset": "debug"
+            "configurePreset": "debug",
+            "execution": {
+                "timeout": 10
+            }
         }
     ],
     "packagePresets": [
