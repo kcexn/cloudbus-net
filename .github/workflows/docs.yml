@@ -56,17 +56,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y ninja-build gcc g++ ccache cmake doxygen graphviz python3-all
 
-    - name: Cache Python dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: pip-${{ runner.os }}-${{ hashFiles('.github/workflows/docs.yml') }}
-        restore-keys: |
-          pip-${{ runner.os }}-
-
-    - name: Install Python dependencies
-      run: pip install gcovr==7.0
-
     - name: Create cache directories
       run: mkdir -p ~/.ccache ~/.cache/CPM
 
@@ -101,6 +90,7 @@ jobs:
       run: |
         cmake --preset debug \
           -DCPM_SOURCE_CACHE='~/.cache/CPM' \
+          -DCPPNET_BUILD_TESTING='OFF' \
           -DCPPNET_BUILD_DOCS='ON'
 
     - name: Build documentation
