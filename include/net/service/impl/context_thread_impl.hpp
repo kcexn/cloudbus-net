@@ -25,31 +25,6 @@
 
 #include <stdexec/execution.hpp>
 namespace net::service {
-
-template <ServiceLike Service>
-template <typename Fn>
-  requires std::is_invocable_r_v<bool, Fn>
-auto context_thread<Service>::isr(async_scope &scope,
-                                  const socket_dialog &socket,
-                                  Fn handle) -> void
-{
-  using namespace io::socket;
-  using namespace stdexec;
-
-  static constexpr auto BUFSIZE = 1024UL;
-  static auto buffer = std::array<char, BUFSIZE>{};
-  static auto msg = socket_message{.buffers = buffer};
-
-  if (!handle())
-    return;
-
-  auto recvmsg =
-      io::recvmsg(socket, msg, 0) |
-      then([=, &scope](auto len) noexcept { isr(scope, socket, handle); }) |
-      upon_error([](auto &&err) noexcept {});
-  scope.spawn(std::move(recvmsg));
-}
-
 template <ServiceLike Service>
 auto context_thread<Service>::stop() noexcept -> void
 {
@@ -79,7 +54,7 @@ auto context_thread<Service>::start(Args &&...args) -> void
     {
       const auto token = scope.get_stop_token();
 
-      isr(scope, poller.emplace(sockets[0]), [&]() noexcept {
+      isr(poller.emplace(sockets[0]), [&]() noexcept {
         auto sigmask_ = sigmask.exchange(0);
         for (int signum = 0; auto mask = (sigmask_ >> signum); ++signum)
         {

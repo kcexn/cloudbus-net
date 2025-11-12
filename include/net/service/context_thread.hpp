@@ -20,66 +20,12 @@
 #pragma once
 #ifndef CPPNET_CONTEXT_THREAD_HPP
 #define CPPNET_CONTEXT_THREAD_HPP
-#include "net/detail/concepts.hpp"
-#include "net/detail/immovable.hpp"
-#include "net/timers/timers.hpp"
+#include "async_context.hpp"
 
-#include <exec/async_scope.hpp>
-#include <io/io.hpp>
-
-#include <atomic>
-#include <cstdint>
 #include <mutex>
 #include <thread>
-#include <type_traits>
 /** @brief This namespace is for network services. */
 namespace net::service {
-
-/** @brief Data members for an asynchronous service context. */
-struct async_context : detail::immovable {
-  /** @brief Asynchronous scope type. */
-  using async_scope = exec::async_scope;
-  /** @brief The io multiplexer type. */
-  using multiplexer_type = io::execution::poll_multiplexer;
-  /** @brief The io triggers type. */
-  using triggers = io::execution::basic_triggers<multiplexer_type>;
-  /** @brief The signal mask type. */
-  using signal_mask = std::uint64_t;
-  /** @brief Interrupt source type. */
-  using interrupt_source = timers::socketpair_interrupt_source_t;
-  /** @brief The timers type. */
-  using timers_type = timers::timers<interrupt_source>;
-
-  /** @brief An enum of all valid async context signals. */
-  enum signals : std::uint8_t { terminate = 0, user1, END };
-  /** @brief An enum of valid context states. */
-  enum context_states : std::uint8_t { PENDING = 0, STARTED, STOPPED };
-
-  /** @brief The asynchronous scope. */
-  async_scope scope;
-  /** @brief The poll triggers. */
-  triggers poller;
-  /** @brief A counter that tracks the context state. */
-  std::atomic<context_states> state{PENDING};
-  /** @brief The active signal mask. */
-  std::atomic<signal_mask> sigmask;
-  /** @brief The event loop timers. */
-  timers_type timers;
-
-  /**
-   * @brief Sets the signal mask, then interrupts the service.
-   * @param signum The signal to send. Must be in range of
-   *               enum signals.
-   */
-  inline auto signal(int signum) -> void;
-
-  /** @brief Calls the timers interrupt. */
-  inline auto interrupt() const noexcept -> void;
-
-  /** @brief Runs the event loop. */
-  inline auto run() -> void;
-};
-
 /**
  * @brief A threaded asynchronous service.
  *
@@ -97,21 +43,6 @@ template <ServiceLike Service> class context_thread : public async_context {
   using clock = std::chrono::steady_clock;
   /** @brief The duration type. */
   using duration = std::chrono::milliseconds;
-  /**
-   * @brief An interrupt service routine.
-   *
-   * This interrupts the running event loop in a thread so
-   * that signals can be handled.
-   *
-   * @param scope The asynchronous scope.
-   * @param socket The listening socket for interrupts.
-   * @param handle A function that passes signals to the service
-   *               signal handler.
-   */
-  template <typename Fn>
-    requires std::is_invocable_r_v<bool, Fn>
-  static auto isr(async_scope &scope, const socket_dialog &socket,
-                  Fn handle) -> void;
 
   /** @brief Called when the async_service is stopped. */
   auto stop() noexcept -> void;
@@ -151,7 +82,6 @@ private:
 
 } // namespace net::service
 
-#include "impl/async_context_impl.hpp"  // IWYU pragma: export
 #include "impl/context_thread_impl.hpp" // IWYU pragma: export
 
 #endif // CPPNET_CONTEXT_THREAD_HPP

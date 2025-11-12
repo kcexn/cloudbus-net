@@ -21,7 +21,7 @@
 #pragma once
 #ifndef CPPNET_ASYNC_CONTEXT_IMPL_HPP
 #define CPPNET_ASYNC_CONTEXT_IMPL_HPP
-#include "net/service/context_thread.hpp"
+#include "net/service/async_context.hpp"
 namespace net::service {
 
 inline auto async_context::signal(int signum) -> void
@@ -35,6 +35,29 @@ inline auto async_context::signal(int signum) -> void
 inline auto async_context::interrupt() const noexcept -> void
 {
   static_cast<const timers_type::interrupt_source_t &>(timers).interrupt();
+}
+
+template <typename Fn>
+  requires std::is_invocable_r_v<bool, Fn>
+auto async_context::isr(const socket_dialog &socket, Fn routine) -> void
+{
+  using namespace io::socket;
+  using namespace stdexec;
+  using socket_message = socket_message<sockaddr_in>;
+
+  static constexpr auto BUFLEN = 1024UL;
+  static auto buffer = std::array<std::byte, BUFLEN>{};
+  static auto msg = socket_message{.buffers = buffer};
+
+  if (!routine())
+    return;
+
+  sender auto recvmsg = io::recvmsg(socket, msg, 0) |
+                        then([this, socket, func = std::move(routine)](auto) {
+                          isr(socket, std::move(func));
+                        }) |
+                        upon_error([](auto) noexcept {});
+  scope.spawn(std::move(recvmsg));
 }
 
 inline auto async_context::run() -> void
