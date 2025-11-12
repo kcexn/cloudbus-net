@@ -54,16 +54,16 @@ struct async_context : detail::immovable {
   /** @brief An enum of valid context states. */
   enum context_states : std::uint8_t { PENDING = 0, STARTED, STOPPED };
 
+  /** @brief The event loop timers. */
+  timers_type timers;
   /** @brief The asynchronous scope. */
   async_scope scope;
   /** @brief The poll triggers. */
   triggers poller;
-  /** @brief A counter that tracks the context state. */
-  std::atomic<context_states> state{PENDING};
   /** @brief The active signal mask. */
   std::atomic<signal_mask> sigmask;
-  /** @brief The event loop timers. */
-  timers_type timers;
+  /** @brief A counter that tracks the context state. */
+  std::atomic<context_states> state{PENDING};
 
   /**
    * @brief Sets the signal mask, then interrupts the service.
