@@ -32,7 +32,7 @@
 /** @brief This namespace is for network services. */
 namespace net::service {
 
-/** @brief Data members for an asynchronous service context. */
+/** @brief An asynchronous execution context. */
 struct async_context : detail::immovable {
   /** @brief Asynchronous scope type. */
   using async_scope = exec::async_scope;
@@ -78,9 +78,11 @@ struct async_context : detail::immovable {
   /**
    * @brief An interrupt service routine for the poller.
    * @details When invoked, `isr()` installs an event
-   * handler on socket events received on `socket`.
+   * handler on socket events received on `socket`. The routine will be
+   * continuously re-installed in a loop until it returns false.
    * @tparam Fn A callable to run upon receiving an interrupt.
-   * @param socket The listening socket for interrupts.
+   * @param socket The listening socket for interrupts. Its lifetime is
+   * tied to the lifetime of `routine`.
    * @param routine The routine to run upon receiving a poll interrupt on
    * `socket`.
    * @code

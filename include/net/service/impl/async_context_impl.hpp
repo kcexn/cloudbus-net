@@ -22,7 +22,34 @@
 #ifndef CPPNET_ASYNC_CONTEXT_IMPL_HPP
 #define CPPNET_ASYNC_CONTEXT_IMPL_HPP
 #include "net/service/async_context.hpp"
+
+#include <cassert>
 namespace net::service {
+/** @brief Internal net::service implementation details. */
+namespace detail {
+/**
+ * @brief Computes the time in ms poller.wait_for() should block for
+ * before waking for the next event.
+ * @note This helper method was primarily added for the purposes
+ * of test coverage, it isn't really reusable outside of the
+ * async_context class.
+ * @tparam Rep The duration tick type.
+ * @tparam Period the tick period.
+ * @param duration The duration to convert to milliseconds.
+ * Must be in the range of [-1, duration.max()].
+ * @returns -1 If the duration is -1, otherwise it returns the
+ * duration count in milliseconds.
+ */
+template <class Rep, class Period = std::ratio<1>>
+auto to_millis(std::chrono::duration<Rep, Period> duration) -> int
+{
+  using namespace std::chrono;
+  assert(duration.count() >= -1 &&
+         "duration must be in the interval of -1 to duration.max()");
+  return (duration.count() < 0) ? duration.count()
+                                : duration_cast<milliseconds>(duration).count();
+}
+} // namespace detail.
 
 inline auto async_context::signal(int signum) -> void
 {
@@ -64,21 +91,13 @@ inline auto async_context::run() -> void
 {
   using namespace stdexec;
   using namespace std::chrono;
-
-  auto next = timers.resolve();
-  auto wait_ms = (next.count() < 0) ? next.count()
-                                    : duration_cast<milliseconds>(next).count();
+  using namespace detail;
 
   auto is_empty = std::atomic_flag();
   scope.spawn(poller.on_empty() |
               then([&]() noexcept { is_empty.test_and_set(); }));
 
-  while (poller.wait_for(static_cast<int>(wait_ms)) || !is_empty.test())
-  {
-    next = timers.resolve();
-    wait_ms = (next.count() < 0) ? next.count()
-                                 : duration_cast<milliseconds>(next).count();
-  }
+  while (poller.wait_for(to_millis(timers.resolve())) || !is_empty.test());
 }
 
 } // namespace net::service
