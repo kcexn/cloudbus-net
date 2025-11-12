@@ -37,5 +37,26 @@ inline auto async_context::interrupt() const noexcept -> void
   static_cast<const timers_type::interrupt_source_t &>(timers).interrupt();
 }
 
+inline auto async_context::run() -> void
+{
+  using namespace stdexec;
+  using namespace std::chrono;
+
+  auto next = timers.resolve();
+  auto wait_ms = (next.count() < 0) ? next.count()
+                                    : duration_cast<milliseconds>(next).count();
+
+  auto is_empty = std::atomic_flag();
+  scope.spawn(poller.on_empty() |
+              then([&]() noexcept { is_empty.test_and_set(); }));
+
+  while (poller.wait_for(static_cast<int>(wait_ms)) || !is_empty.test())
+  {
+    next = timers.resolve();
+    wait_ms = (next.count() < 0) ? next.count()
+                                 : duration_cast<milliseconds>(next).count();
+  }
+}
+
 } // namespace net::service
 #endif // CPPNET_ASYNC_CONTEXT_IMPL_HPP

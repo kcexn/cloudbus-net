@@ -109,7 +109,7 @@ auto context_thread<Service>::start(Args &&...args) -> void
       }
 
       state.notify_all();
-      run(service, token);
+      run();
     }
 
     stop();
@@ -126,30 +126,6 @@ template <ServiceLike Service> context_thread<Service>::~context_thread()
 
   signal(terminate);
   server_.join();
-}
-
-template <ServiceLike Service>
-template <typename StopToken>
-auto context_thread<Service>::run(Service &service,
-                                  const StopToken &token) -> void
-{
-  using namespace stdexec;
-  using namespace std::chrono;
-
-  auto next = timers.resolve();
-  int wait_ms =
-      (next.count() < 0) ? next.count() : duration_cast<duration>(next).count();
-
-  auto is_empty = std::atomic_flag();
-  scope.spawn(poller.on_empty() |
-              then([&]() noexcept { is_empty.test_and_set(); }));
-
-  while (poller.wait_for(wait_ms) || !is_empty.test())
-  {
-    next = timers.resolve();
-    wait_ms = (next.count() < 0) ? next.count()
-                                 : duration_cast<duration>(next).count();
-  }
 }
 } // namespace net::service
 #endif // CPPNET_CONTEXT_THREAD_IMPL_HPP

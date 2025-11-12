@@ -75,6 +75,9 @@ struct async_context : detail::immovable {
 
   /** @brief Calls the timers interrupt. */
   inline auto interrupt() const noexcept -> void;
+
+  /** @brief Runs the event loop. */
+  inline auto run() -> void;
 };
 
 /**
@@ -144,15 +147,6 @@ private:
   std::mutex mtx_;
   /** @brief Flag that guards against starting a thread twice. */
   bool started_{false};
-
-  /**
-   * @brief Runs the event loop.
-   * @tparam StopToken The stop token type.
-   * @param service The service to run on the event loop.
-   * @param token The stop token to use with the service.
-   */
-  template <typename StopToken>
-  auto run(Service &service, const StopToken &token) -> void;
 };
 
 } // namespace net::service
