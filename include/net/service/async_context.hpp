@@ -38,16 +38,22 @@ struct async_context : detail::immovable {
   using async_scope = exec::async_scope;
   /** @brief The io multiplexer type. */
   using multiplexer_type = io::execution::poll_multiplexer;
-  /** @brief The socket dialog type. */
-  using socket_dialog = io::socket::socket_dialog<multiplexer_type>;
   /** @brief The io triggers type. */
   using triggers = io::execution::basic_triggers<multiplexer_type>;
+  /** @brief The socket dialog type. */
+  using socket_dialog = triggers::socket_dialog;
+  /** @brief The socket type. */
+  using socket_type = io::socket::native_socket_type;
   /** @brief The signal mask type. */
   using signal_mask = std::uint64_t;
   /** @brief Interrupt source type. */
   using interrupt_source = timers::socketpair_interrupt_source_t;
   /** @brief The timers type. */
   using timers_type = timers::timers<interrupt_source>;
+  /** @brief The clock type. */
+  using clock = std::chrono::steady_clock;
+  /** @brief The duration type. */
+  using duration = std::chrono::milliseconds;
 
   /** @brief An enum of all valid async context signals. */
   enum signals : std::uint8_t { terminate = 0, user1, END };

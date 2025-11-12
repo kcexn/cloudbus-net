@@ -35,18 +35,6 @@ namespace net::service {
  * @tparam Service The service to run.
  */
 template <ServiceLike Service> class context_thread : public async_context {
-  /** @brief The socket dialog type. */
-  using socket_dialog = triggers::socket_dialog;
-  /** @brief The socket type. */
-  using socket_type = io::socket::native_socket_type;
-  /** @brief The clock type. */
-  using clock = std::chrono::steady_clock;
-  /** @brief The duration type. */
-  using duration = std::chrono::milliseconds;
-
-  /** @brief Called when the async_service is stopped. */
-  auto stop() noexcept -> void;
-
 public:
   /** @brief Default constructor. */
   context_thread() = default;
@@ -78,6 +66,9 @@ private:
   std::mutex mtx_;
   /** @brief Flag that guards against starting a thread twice. */
   bool started_{false};
+
+  /** @brief Called when the async_service is stopped. */
+  auto stop() noexcept -> void;
 };
 
 } // namespace net::service
