@@ -20,21 +20,24 @@
 #pragma once
 #ifndef CPPNET_WITH_LOCK_HPP
 #define CPPNET_WITH_LOCK_HPP
+#include "concepts.hpp"
+
 #include <mutex>
-#include <type_traits>
 /** @brief This namespace provides internal cppnet implementation details. */
 namespace net::detail {
 /**
  * @brief Runs the supplied functor while holding the acquired lock.
+ * @tparam Lock A type that satisfies the BasicLockable named requirement.
  * @tparam Fn The functor type.
- * @param lock The lock for thread-safety.
+ * @param mtx The lock for thread-safety.
  * @param func The functor to invoke.
  * @returns The return value of func.
  */
-template <typename Fn>
+template <BasicLockable Lock, typename Fn>
   requires std::is_invocable_v<Fn>
-auto with_lock(std::unique_lock<std::mutex> lock, Fn &&func) -> decltype(auto)
+auto with_lock(Lock &mtx, Fn &&func) -> decltype(auto)
 {
+  auto guard = std::lock_guard(mtx);
   return std::forward<Fn>(func)();
 }
 

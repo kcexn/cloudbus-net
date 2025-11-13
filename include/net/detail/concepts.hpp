@@ -31,6 +31,13 @@ struct async_context;
  * @brief The root namespace for all cppnet components.
  */
 namespace net {
+/** @brief A concept to validate the C++ BasicLockable requirement. */
+template <typename Lock>
+concept BasicLockable = requires(Lock lock) {
+  { lock.lock() } -> std::same_as<void>;
+  { lock.unlock() } -> std::same_as<void>;
+};
+
 /** @brief ServiceLike describes types that behave like an application or
  * service. */
 template <typename S>

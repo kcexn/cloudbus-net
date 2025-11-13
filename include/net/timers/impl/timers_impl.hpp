@@ -244,8 +244,7 @@ auto timers<Interrupt>::resolve() -> duration
   using namespace std::chrono;
   auto &[events, eventq, free_ids] = state_;
 
-  auto timers =
-      with_lock(std::unique_lock(mtx_), [&] { return dequeue_timers(state_); });
+  auto timers = with_lock(mtx_, [&] { return dequeue_timers(state_); });
 
   // Run handlers and remove unarmed timers.
   auto [unarmed, end] = std::ranges::remove_if(timers, [&](event_ref ref) {
@@ -260,7 +259,7 @@ auto timers<Interrupt>::resolve() -> duration
     return !event.armed.test();
   });
 
-  return with_lock(std::unique_lock(mtx_), [&] {
+  return with_lock(mtx_, [&] {
     return update_timers(state_, timers.begin(), unarmed, end);
   });
 }
