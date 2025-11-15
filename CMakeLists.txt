@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 project(
   CppNet
-  VERSION 0.7.6
+  VERSION 0.8.0
   LANGUAGES CXX)
 
 # net requires at least C++20
