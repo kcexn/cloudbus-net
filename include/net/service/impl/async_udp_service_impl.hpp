@@ -54,12 +54,12 @@ auto async_udp_service<UDPStreamHandler, Size>::start(
 
   server_sockfd_ = static_cast<socket_type>(sock);
 
-  reader(ctx, ctx.poller.emplace(std::move(sock)),
-         std::make_shared<read_context>());
+  submit_recv(ctx, ctx.poller.emplace(std::move(sock)),
+              std::make_shared<read_context>());
 }
 
 template <typename UDPStreamHandler, std::size_t Size>
-auto async_udp_service<UDPStreamHandler, Size>::reader(
+auto async_udp_service<UDPStreamHandler, Size>::submit_recv(
     async_context &ctx, const socket_dialog &socket,
     std::shared_ptr<read_context> rctx) -> void
 {
@@ -84,8 +84,8 @@ auto async_udp_service<UDPStreamHandler, Size>::emit(
     async_context &ctx, const socket_dialog &socket,
     std::shared_ptr<read_context> rctx, std::span<const std::byte> buf) -> void
 {
-  auto &handle = static_cast<UDPStreamHandler &>(*this);
-  handle(ctx, socket, std::move(rctx), buf);
+  static_cast<UDPStreamHandler *>(this)->service(ctx, socket, std::move(rctx),
+                                                 buf);
 }
 
 template <typename UDPStreamHandler, std::size_t Size>

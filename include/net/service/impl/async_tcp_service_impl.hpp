@@ -84,7 +84,7 @@ auto async_tcp_service<TCPStreamHandler, Size>::acceptor(
 }
 
 template <typename TCPStreamHandler, std::size_t Size>
-auto async_tcp_service<TCPStreamHandler, Size>::reader(
+auto async_tcp_service<TCPStreamHandler, Size>::submit_recv(
     async_context &ctx, const socket_dialog &socket,
     std::shared_ptr<read_context> rctx) -> void
 {
@@ -113,8 +113,8 @@ auto async_tcp_service<TCPStreamHandler, Size>::emit(
     async_context &ctx, const socket_dialog &socket,
     std::shared_ptr<read_context> rctx, std::span<const std::byte> buf) -> void
 {
-  auto &handle = static_cast<TCPStreamHandler &>(*this);
-  handle(ctx, socket, std::move(rctx), buf);
+  static_cast<TCPStreamHandler *>(this)->service(ctx, socket, std::move(rctx),
+                                                 buf);
 }
 
 template <typename TCPStreamHandler, std::size_t Size>

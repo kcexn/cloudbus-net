@@ -115,13 +115,13 @@ public:
    */
   auto start(async_context &ctx) noexcept -> void;
   /**
-   * @brief Read data from a connected socket.
+   * @brief Submits an asynchronous socket recv.
    * @param ctx The async context to start the reader on.
    * @param socket the socket to read data from.
    * @param rctx A shared pointer to a mutable read buffer.
    */
-  auto reader(async_context &ctx, const socket_dialog &socket,
-              std::shared_ptr<read_context> rctx) -> void;
+  auto submit_recv(async_context &ctx, const socket_dialog &socket,
+                   std::shared_ptr<read_context> rctx) -> void;
 
 protected:
   /** @brief Default constructor. */

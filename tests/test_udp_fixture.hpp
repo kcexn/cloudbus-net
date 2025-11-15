@@ -52,16 +52,16 @@ struct udp_echo_service : public async_udp_service<udp_echo_service> {
 
     sender auto sendmsg = io::sendmsg(socket, msg, 0) |
                           then([&, socket, rctx, msg](auto &&len) mutable {
-                            reader(ctx, socket, std::move(rctx));
+                            submit_recv(ctx, socket, std::move(rctx));
                           }) |
                           upon_error([](auto &&error) {});
 
     ctx.scope.spawn(std::move(sendmsg));
   }
 
-  auto operator()(async_context &ctx, const socket_dialog &socket,
-                  std::shared_ptr<read_context> rctx,
-                  std::span<const std::byte> buf) -> void
+  auto service(async_context &ctx, const socket_dialog &socket,
+               std::shared_ptr<read_context> rctx,
+               std::span<const std::byte> buf) -> void
   {
     using namespace io::socket;
     if (!rctx)

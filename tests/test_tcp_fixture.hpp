@@ -53,17 +53,18 @@ struct tcp_echo_service : public async_tcp_service<tcp_echo_service> {
     using namespace io::socket;
     using namespace stdexec;
 
-    sender auto sendmsg =
-        io::sendmsg(socket, msg, 0) |
-        then([&, socket, rctx](auto &&len) { reader(ctx, socket, rctx); }) |
-        upon_error([](auto &&error) {});
+    sender auto sendmsg = io::sendmsg(socket, msg, 0) |
+                          then([&, socket, rctx](auto &&len) {
+                            submit_recv(ctx, socket, rctx);
+                          }) |
+                          upon_error([](auto &&error) {});
 
     ctx.scope.spawn(std::move(sendmsg));
   }
 
-  auto operator()(async_context &ctx, const socket_dialog &socket,
-                  std::shared_ptr<read_context> rctx,
-                  std::span<const std::byte> buf) -> void
+  auto service(async_context &ctx, const socket_dialog &socket,
+               std::shared_ptr<read_context> rctx,
+               std::span<const std::byte> buf) -> void
   {
     echo(ctx, socket, rctx, {.buffers = buf});
   }
